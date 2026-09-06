@@ -178,6 +178,13 @@ export async function POST(req: Request) {
   const formData = await req.formData()
   const files = formData.getAll('files') as File[]
 
+  // Parse genres from FormData
+  const genresRaw = formData.get('genres') as string | null
+  let importGenres: string[] = []
+  if (genresRaw) {
+    try { importGenres = JSON.parse(genresRaw) } catch { importGenres = [] }
+  }
+
   if (!files.length) return NextResponse.json({ error: 'No files' }, { status: 400 })
 
   const allBooks = await getAllBooks()
@@ -219,6 +226,7 @@ export async function POST(req: Request) {
           author: parsed.author,
           description: parsed.description,
           cover: parsed.coverBase64,
+          genres: importGenres.length > 0 ? importGenres : undefined,
           sourceFileName: file.name,
           sourceFileType: ext,
           chapterCount: parsed.chapters.length,
@@ -230,7 +238,7 @@ export async function POST(req: Request) {
           author: parsed.author,
           description: parsed.description,
           cover: parsed.coverBase64,
-          genres: [],
+          genres: importGenres,
           sourceFileName: file.name,
           sourceFileType: ext,
           chapterCount: parsed.chapters.length,

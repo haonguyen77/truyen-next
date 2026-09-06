@@ -17,6 +17,7 @@
 .fileListHeader { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #f0f0ec; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 700; color: var(--text-secondary); letter-spacing: 0.5px; }
 .clearBtn { background: none; border: none; color: #c0392b; font-size: 12px; cursor: pointer; }
 .clearBtn:hover { text-decoration: underline; }
+.fileScroll { max-height: 280px; overflow-y: auto; }
 .fileItem { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--border-light); font-size: 13px; }
 .fileItem:last-of-type { border-bottom: none; }
 .fileName { flex: 1; word-break: break-all; }
@@ -29,8 +30,12 @@
 .importBtn:hover:not(:disabled) { background: var(--accent-hover); }
 .importBtn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-.importing { text-align: center; padding: 60px 24px; color: var(--text-secondary); background: #fff; border-radius: 8px; border: 1px solid var(--border); margin-top: 20px; }
-.spinner { font-size: 40px; margin-bottom: 16px; animation: spin 1.5s linear infinite; display: inline-block; }
+.importing { text-align: center; padding: 40px 24px; color: var(--text-secondary); background: #fff; border-radius: 8px; border: 1px solid var(--border); margin-top: 20px; }
+.progressBar { height: 10px; background: #e8e8e8; border-radius: 5px; overflow: hidden; margin-bottom: 16px; }
+.progressFill { height: 100%; background: var(--accent); transition: width 0.3s; border-radius: 5px; }
+.progressText { font-size: 14px; margin-bottom: 6px; }
+.progressCount { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+.spinner { display: inline-block; margin-right: 8px; animation: spin 1.5s linear infinite; }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 .note { font-size: 13px; color: var(--text-muted); margin-top: 8px; }
 
@@ -56,3 +61,29 @@
 .importMoreBtn:hover { border-color: #aaa; }
 .libraryBtn { padding: 9px 20px; background: var(--accent); color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; }
 .libraryBtn:hover { background: var(--accent-hover); }
+
+/* ── Genre Section ── */
+.genreSection { margin-top: 20px; background: #fff; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.genreHeader { display: flex; align-items: baseline; gap: 10px; padding: 12px 16px 10px; background: #f8f7f3; border-bottom: 1px solid var(--border); }
+.genreTitle { font-size: 14px; font-weight: 700; color: var(--navy); }
+.genreDesc { font-size: 12px; color: var(--text-muted); }
+
+.presetWrap { display: flex; flex-wrap: wrap; gap: 7px; padding: 14px 16px 10px; border-bottom: 1px solid var(--border-light); }
+.presetChip { padding: 4px 12px; border: 1px solid var(--border); border-radius: 20px; background: #fff; font-size: 12px; font-weight: 500; color: #555; cursor: pointer; transition: all 0.12s; font-family: inherit; }
+.presetChip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+.presetActive { background: var(--accent) !important; color: #fff !important; border-color: var(--accent) !important; }
+
+.genreInputRow { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--border-light); }
+.genreInput { flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; font-family: inherit; color: var(--text); }
+.genreInput:focus { outline: none; border-color: var(--accent); }
+.genreInput::placeholder { color: #bbb; }
+.genreAddBtn { padding: 8px 16px; background: var(--navy); color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; font-family: inherit; }
+.genreAddBtn:hover { background: var(--navy-light, #2a3f6b); }
+
+.selectedGenres { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; padding: 10px 16px; }
+.selectedLabel { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.genreTag { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; background: var(--accent-light); color: var(--accent); border: 1px solid var(--accent); border-radius: 20px; font-size: 12px; font-weight: 600; }
+.genreRemove { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 12px; padding: 0; line-height: 1; opacity: 0.7; }
+.genreRemove:hover { opacity: 1; }
+.clearGenresBtn { background: none; border: none; color: #c0392b; font-size: 12px; cursor: pointer; margin-left: 4px; }
+.clearGenresBtn:hover { text-decoration: underline; }
