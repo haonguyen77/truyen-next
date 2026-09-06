@@ -1,8 +1,7 @@
 /**
- * POST /api/import
- * Accepts multipart/form-data with files[]
- * Parses DOCX/EPUB on server, saves to Neon DB
- * Returns per-file results
+ * Import API Route
+ * Server-side parsing: DOCX (mammoth) + EPUB (jszip)
+ * NO JSDOM — pure regex/string HTML parsing to work on Vercel serverless
  */
 import { NextResponse } from 'next/server'
 import { generateId, fileNameToTitle } from '@/lib/generateId'
@@ -16,35 +15,108 @@ interface ParsedResult {
   warnings: string[]; errors: string[]
 }
 
-// ── DOCX parser (server-side with mammoth) ────────────────────
+// ── Pure JS HTML helpers (no JSDOM) ──────────────────────────
+
+/** Extract text content from HTML string */
+function htmlToText(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .trim()
+}
+
+/** Get text content of first matching tag */
+function getTagText(xml: string, tag: string): string {
+  const re = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i')
+  const m = xml.match(re)
+  return m ? htmlToText(m[1]).trim() : ''
+}
+
+/** Get attribute value from HTML tag */
+function getAttr(tag: string, attr: string): string {
+  const re = new RegExp(`${attr}="([^"]*)"`, 'i')
+  const m = tag.match(re)
+  return m ? m[1] : ''
+}
+
+/**
+ * Split HTML by <h1> tags — pure string manipulation
+ * Returns array of { heading, content } sections
+ */
+function splitByH1(html: string): { heading: string; content: string }[] {
+  // Normalize: ensure h1 tags are on their own
+  const sections: { heading: string; content: string }[] = []
+
+  // Split on <h1...>...</h1> boundaries
+  const h1Re = /<h1[^>]*>([\s\S]*?)<\/h1>/gi
+  let lastIndex = 0
+  let match: RegExpExecArray | null
+  let prevHeading = ''
+  let isFirst = true
+
+  // Collect prologue (before first h1)
+  const firstH1 = h1Re.exec(html)
+  if (!firstH1) return []
+
+  // Reset
+  h1Re.lastIndex = 0
+
+  const parts: Array<{ heading: string; start: number; end: number }> = []
+  while ((match = h1Re.exec(html)) !== null) {
+    parts.push({
+      heading: match[1] ?? '',
+      start: match.index,
+      end: h1Re.lastIndex,
+    })
+  }
+
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i]
+    const contentStart = part.end
+    const contentEnd = i + 1 < parts.length ? parts[i + 1].start : html.length
+    const content = html.slice(contentStart, contentEnd).trim()
+    sections.push({ heading: htmlToText(part.heading).trim(), content })
+  }
+
+  return sections
+}
+
+// ── DOCX Parser ───────────────────────────────────────────────
 async function parseDocx(buffer: ArrayBuffer, fileName: string): Promise<ParsedResult> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mammoth = await import('mammoth') as any
   const warnings: string[] = []
   const errors: string[] = []
-
   let html = ''
+
   try {
-    // Mammoth on Node.js needs a Node Buffer, not Web ArrayBuffer
     const nodeBuffer = Buffer.from(buffer)
     const result = await mammoth.convertToHtml({ buffer: nodeBuffer }, {
       styleMap: [
         "p[style-name='Heading 1'] => h1:fresh",
         "p[style-name='Heading 2'] => h2:fresh",
-        "p[style-name='Heading 3'] => h2:fresh",
+        "p[style-name='Heading 3'] => h3:fresh",
         "p[style-name='Tiêu đề 1'] => h1:fresh",
         "p[style-name='Tiêu đề 2'] => h2:fresh",
         "p[style-name='heading 1'] => h1:fresh",
         "p[style-name='heading 2'] => h2:fresh",
+        "p[style-name='Title'] => h1:fresh",
       ].join('\n'),
     })
-    html = result.value.normalize('NFC')
-    for (const m of result.messages) {
+    html = (result.value as string).normalize('NFC')
+    for (const m of result.messages as Array<{ type: string; message: string }>) {
       if (m.type === 'warning') {
         const t = m.message.toLowerCase()
-        if (!t.includes('unrecognised') && !t.includes('drawing') && !t.includes('wps:')) {
-          warnings.push(m.message)
-        }
+        const isNoise = t.includes('unrecognised') || t.includes('drawing') ||
+          t.includes('wps:') || t.includes('wpg:') || t.includes('mc:') || t.includes('w14:')
+        if (!isNoise) warnings.push(m.message)
       }
     }
   } catch (err) {
@@ -52,52 +124,73 @@ async function parseDocx(buffer: ArrayBuffer, fileName: string): Promise<ParsedR
     return { title: fileNameToTitle(fileName), author: '', description: '', coverBase64: '', chapters: [], warnings, errors }
   }
 
-  // Split by H1
-  const { JSDOM } = await import('jsdom').catch(() => ({ JSDOM: null }))
-  if (!JSDOM) {
-    errors.push('Không thể parse HTML trên server.')
+  // Split by H1 using pure string parsing (no JSDOM)
+  const sections = splitByH1(html)
+  if (sections.length === 0) {
+    errors.push('Không tìm thấy Heading 1 trong file. Vui lòng định dạng tiêu đề chương bằng "Heading 1" trong Word.')
     return { title: fileNameToTitle(fileName), author: '', description: '', coverBase64: '', chapters: [], warnings, errors }
   }
 
-  const dom = new JSDOM(`<div id="root">${html}</div>`)
-  const root = dom.window.document.getElementById('root')!
-  const children = Array.from(root.childNodes)
-
-  const sections: { heading: Element | null; nodes: ChildNode[] }[] = []
-  let current: { heading: Element | null; nodes: ChildNode[] } = { heading: null, nodes: [] }
-
-  for (const node of children) {
-    if (node.nodeType === 1 && (node as Element).tagName === 'H1') {
-      sections.push({ ...current })
-      current = { heading: node as Element, nodes: [] }
-    } else {
-      current.nodes.push(node)
+  const chapters: ParsedChapter[] = sections.map((s, i) => {
+    const text = htmlToText(s.content)
+    return {
+      index: i,
+      title: s.heading.normalize('NFC') || `Chương ${i + 1}`,
+      content: s.content.normalize('NFC'),
+      wordCount: text.split(/\s+/).filter(Boolean).length,
     }
-  }
-  sections.push(current)
+  })
 
-  const chapterSections = sections.slice(1)
-  if (chapterSections.length === 0) {
-    errors.push('Không tìm thấy Heading 1 trong file DOCX.')
-    return { title: fileNameToTitle(fileName), author: '', description: '', coverBase64: '', chapters: [], warnings, errors }
-  }
-
-  const parsedChapters: ParsedChapter[] = []
-  for (let i = 0; i < chapterSections.length; i++) {
-    const s = chapterSections[i]
-    if (!s.heading) continue
-    const title = (s.heading.textContent?.trim() ?? `Chương ${i + 1}`).normalize('NFC')
-    const div = dom.window.document.createElement('div')
-    s.nodes.forEach(n => div.appendChild(n.cloneNode(true)))
-    const content = div.innerHTML.normalize('NFC')
-    const text = div.textContent?.trim() ?? ''
-    parsedChapters.push({ index: i, title, content, wordCount: text.split(/\s+/).filter(Boolean).length })
-  }
-
-  return { title: fileNameToTitle(fileName), author: '', description: '', coverBase64: '', chapters: parsedChapters, warnings, errors }
+  return { title: fileNameToTitle(fileName), author: '', description: '', coverBase64: '', chapters, warnings, errors }
 }
 
-// ── EPUB parser (server-side with jszip) ─────────────────────
+// ── EPUB Parser ───────────────────────────────────────────────
+function resolveEpubPath(base: string, rel: string): string {
+  if (rel.startsWith('/')) return rel.slice(1)
+  const parts = base.split('/'); parts.pop()
+  for (const s of rel.split('/')) {
+    if (s === '..') parts.pop()
+    else if (s !== '.') parts.push(s)
+  }
+  return parts.join('/')
+}
+
+/** Extract all items from OPF manifest using regex */
+function parseOPFManifest(opfXml: string): Record<string, { href: string; mediaType: string }> {
+  const manifest: Record<string, { href: string; mediaType: string }> = {}
+  const itemRe = /<item\s[^>]*>/gi
+  let m: RegExpExecArray | null
+  while ((m = itemRe.exec(opfXml)) !== null) {
+    const tag = m[0]
+    const id = getAttr(tag, 'id')
+    const href = getAttr(tag, 'href')
+    const mt = getAttr(tag, 'media-type')
+    if (id && href) manifest[id] = { href, mediaType: mt }
+  }
+  return manifest
+}
+
+/** Extract spine itemrefs from OPF using regex */
+function parseOPFSpine(opfXml: string): string[] {
+  const spine: string[] = []
+  const itemrefRe = /<itemref\s[^>]*>/gi
+  let m: RegExpExecArray | null
+  while ((m = itemrefRe.exec(opfXml)) !== null) {
+    const idref = getAttr(m[0], 'idref')
+    if (idref) spine.push(idref)
+  }
+  return spine
+}
+
+/** Extract body content from XHTML/HTML string */
+function extractBody(xhtml: string): string {
+  const bodyMatch = xhtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i)
+  let body = bodyMatch ? bodyMatch[1] : xhtml
+  // Remove nav elements
+  body = body.replace(/<nav[\s\S]*?<\/nav>/gi, '')
+  return body.trim()
+}
+
 async function parseEpub(buffer: ArrayBuffer, fileName: string): Promise<ParsedResult> {
   const JSZip = (await import('jszip')).default
   const warnings: string[] = []
@@ -105,49 +198,36 @@ async function parseEpub(buffer: ArrayBuffer, fileName: string): Promise<ParsedR
 
   let zip: InstanceType<typeof JSZip>
   try { zip = await JSZip.loadAsync(buffer) }
-  catch (err) { return { title: fileNameToTitle(fileName), author: '', description: '', coverBase64: '', chapters: [], warnings, errors: [`Không mở được EPUB: ${err}`] } }
+  catch (err) {
+    return { title: fileNameToTitle(fileName), author: '', description: '', coverBase64: '', chapters: [], warnings, errors: [`Không mở được EPUB: ${err}`] }
+  }
 
   const containerXml = await zip.file('META-INF/container.xml')?.async('string') ?? ''
-  if (!containerXml) return { title: fileNameToTitle(fileName), author: '', description: '', coverBase64: '', chapters: [], warnings, errors: ['Không tìm thấy container.xml'] }
-
   const opfMatch = containerXml.match(/full-path="([^"]+)"/)
-  if (!opfMatch) return { title: fileNameToTitle(fileName), author: '', description: '', coverBase64: '', chapters: [], warnings, errors: ['Không tìm thấy OPF path'] }
+  if (!opfMatch) {
+    return { title: fileNameToTitle(fileName), author: '', description: '', coverBase64: '', chapters: [], warnings, errors: ['Không tìm thấy OPF'] }
+  }
 
   const opfPath = opfMatch[1]
   const opfXml = await zip.file(opfPath)?.async('string') ?? ''
-  if (!opfXml) return { title: fileNameToTitle(fileName), author: '', description: '', coverBase64: '', chapters: [], warnings, errors: ['Không đọc được OPF'] }
+  if (!opfXml) {
+    return { title: fileNameToTitle(fileName), author: '', description: '', coverBase64: '', chapters: [], warnings, errors: ['Không đọc được OPF'] }
+  }
 
-  const { JSDOM } = await import('jsdom').catch(() => ({ JSDOM: null }))
-  if (!JSDOM) return { title: fileNameToTitle(fileName), author: '', description: '', coverBase64: '', chapters: [], warnings, errors: ['JSDOM not available'] }
+  // Parse metadata with regex (no JSDOM)
+  const bookTitle = (
+    getTagText(opfXml, 'dc:title') ||
+    getTagText(opfXml, 'title') ||
+    fileNameToTitle(fileName)
+  ).normalize('NFC')
+  const author = (getTagText(opfXml, 'dc:creator') || getTagText(opfXml, 'creator')).normalize('NFC')
+  const description = (getTagText(opfXml, 'dc:description') || getTagText(opfXml, 'description')).normalize('NFC')
 
-  const opfDom = new JSDOM(opfXml, { contentType: 'application/xml' })
-  const doc = opfDom.window.document
+  const manifest = parseOPFManifest(opfXml)
+  const spine = parseOPFSpine(opfXml)
 
-  const bookTitle = doc.querySelector('title, dc\\:title')?.textContent?.trim() || fileNameToTitle(fileName)
-  const author = doc.querySelector('creator, dc\\:creator')?.textContent?.trim() || ''
-  const description = doc.querySelector('description, dc\\:description')?.textContent?.trim() || ''
-
-  const manifest: Record<string, { href: string; mediaType: string }> = {}
-  doc.querySelectorAll('manifest item, item').forEach(item => {
-    const id = item.getAttribute('id') ?? ''
-    const href = item.getAttribute('href') ?? ''
-    const mt = item.getAttribute('media-type') ?? ''
-    if (id && href) manifest[id] = { href, mediaType: mt }
-  })
-
-  const spine: string[] = []
-  doc.querySelectorAll('spine itemref, itemref').forEach(ref => {
-    const id = ref.getAttribute('idref') ?? ''
-    if (id) spine.push(id)
-  })
-
-  const opfDir = opfPath.includes('/') ? opfPath.slice(0, opfPath.lastIndexOf('/') + 1) : ''
-
-  function resolve(base: string, rel: string) {
-    if (rel.startsWith('/')) return rel.slice(1)
-    const parts = base.split('/'); parts.pop()
-    for (const s of rel.split('/')) { if (s === '..') parts.pop(); else if (s !== '.') parts.push(s) }
-    return parts.join('/')
+  if (spine.length === 0) {
+    return { title: bookTitle, author, description, coverBase64: '', chapters: [], warnings, errors: ['EPUB không có spine'] }
   }
 
   const chapters: ParsedChapter[] = []
@@ -155,35 +235,52 @@ async function parseEpub(buffer: ArrayBuffer, fileName: string): Promise<ParsedR
 
   for (const idref of spine) {
     const item = manifest[idref]
-    if (!item || (!item.mediaType.includes('html') && !item.mediaType.includes('xml'))) continue
-    const href = resolve(opfPath, item.href)
+    if (!item) continue
+    const mt = item.mediaType
+    if (!mt.includes('html') && !mt.includes('xml')) continue
+
+    const href = resolveEpubPath(opfPath, item.href)
     const xhtml = await zip.file(href)?.async('string') ?? ''
     if (!xhtml.trim()) continue
 
-    const pageDom = new JSDOM(xhtml, { contentType: 'text/html' })
-    const body = pageDom.window.document.body
-    body.querySelectorAll('nav').forEach(n => n.remove())
+    const body = extractBody(xhtml)
+    if (!body) continue
 
-    const text = body.textContent?.trim() ?? ''
-    if (!text) continue
+    const text = htmlToText(body)
+    if (!text.trim()) continue
 
-    const title = (body.querySelector('h1,h2')?.textContent?.trim() || `Phần ${chIdx + 1}`).normalize('NFC')
-    const content = body.innerHTML.normalize('NFC')
-    chapters.push({ index: chIdx, title, content, wordCount: text.split(/\s+/).filter(Boolean).length })
+    // Get chapter title: first h1/h2 in body, or from NCX/NAV later
+    const titleMatch = body.match(/<h[12][^>]*>([\s\S]*?)<\/h[12]>/i)
+    const chTitle = titleMatch
+      ? htmlToText(titleMatch[1]).trim().normalize('NFC')
+      : `Phần ${chIdx + 1}`
+
+    chapters.push({
+      index: chIdx,
+      title: chTitle,
+      content: body.normalize('NFC'),
+      wordCount: text.split(/\s+/).filter(Boolean).length,
+    })
     chIdx++
   }
 
-  if (chapters.length === 0) return { title: bookTitle, author, description, coverBase64: '', chapters: [], warnings, errors: ['Không có nội dung trong EPUB'] }
+  if (chapters.length === 0) {
+    return { title: bookTitle, author, description, coverBase64: '', chapters: [], warnings, errors: ['Không có nội dung trong EPUB'] }
+  }
 
   return { title: bookTitle, author, description, coverBase64: '', chapters, warnings, errors }
 }
 
 // ── Main handler ──────────────────────────────────────────────
 export async function POST(req: Request) {
-  const formData = await req.formData()
-  const files = formData.getAll('files') as File[]
+  let formData: FormData
+  try {
+    formData = await req.formData()
+  } catch {
+    return NextResponse.json({ error: 'Invalid form data' }, { status: 400 })
+  }
 
-  // Parse genres from FormData
+  const files = formData.getAll('files') as File[]
   const genresRaw = formData.get('genres') as string | null
   let importGenres: string[] = []
   if (genresRaw) {
@@ -197,18 +294,24 @@ export async function POST(req: Request) {
 
   for (const file of files) {
     const ext = file.name.toLowerCase().split('.').pop() ?? ''
-    const buffer = await file.arrayBuffer()
+    let buffer: ArrayBuffer
+    try {
+      buffer = await file.arrayBuffer()
+    } catch (err) {
+      results.push({ fileName: file.name, status: 'error', error: `Không đọc được file: ${err}` })
+      continue
+    }
 
     let parsed: ParsedResult
     try {
       if (ext === 'docx') parsed = await parseDocx(buffer, file.name)
       else if (ext === 'epub') parsed = await parseEpub(buffer, file.name)
       else {
-        results.push({ fileName: file.name, status: 'error', error: 'Định dạng không hỗ trợ' })
+        results.push({ fileName: file.name, status: 'error', error: 'Định dạng không hỗ trợ (.docx hoặc .epub)' })
         continue
       }
     } catch (err) {
-      results.push({ fileName: file.name, status: 'error', error: String(err) })
+      results.push({ fileName: file.name, status: 'error', error: `Parse error: ${err instanceof Error ? err.message : String(err)}` })
       continue
     }
 
@@ -217,7 +320,6 @@ export async function POST(req: Request) {
       continue
     }
 
-    // Check duplicate
     const existing = allBooks.find(b => normalizeVietnamese(b.title) === normalizeVietnamese(parsed.title))
 
     try {
@@ -228,9 +330,9 @@ export async function POST(req: Request) {
         await deleteChaptersByBook(bookId)
         await updateBook(bookId, {
           title: parsed.title,
-          author: parsed.author,
-          description: parsed.description,
-          cover: parsed.coverBase64,
+          author: parsed.author || undefined,
+          description: parsed.description || undefined,
+          cover: parsed.coverBase64 || undefined,
           genres: importGenres.length > 0 ? importGenres : undefined,
           sourceFileName: file.name,
           sourceFileType: ext,
@@ -257,12 +359,15 @@ export async function POST(req: Request) {
       })))
 
       results.push({
-        fileName: file.name, status: existing ? 'updated' : 'imported',
-        bookId, title: parsed.title, chapters: parsed.chapters.length,
+        fileName: file.name,
+        status: existing ? 'updated' : 'imported',
+        bookId,
+        title: parsed.title,
+        chapters: parsed.chapters.length,
         warnings: parsed.warnings,
       })
     } catch (err) {
-      results.push({ fileName: file.name, status: 'error', error: String(err) })
+      results.push({ fileName: file.name, status: 'error', error: `DB error: ${err instanceof Error ? err.message : String(err)}` })
     }
   }
 
