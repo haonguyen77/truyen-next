@@ -18,19 +18,24 @@ interface ParsedResult {
 
 // ── DOCX parser (server-side with mammoth) ────────────────────
 async function parseDocx(buffer: ArrayBuffer, fileName: string): Promise<ParsedResult> {
-  const mammoth = await import('mammoth')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mammoth = await import('mammoth') as any
   const warnings: string[] = []
   const errors: string[] = []
 
   let html = ''
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mammothAny = mammoth as any
-    const result = await mammothAny.convertToHtml({ arrayBuffer: buffer }, {
+    // Mammoth on Node.js needs a Node Buffer, not Web ArrayBuffer
+    const nodeBuffer = Buffer.from(buffer)
+    const result = await mammoth.convertToHtml({ buffer: nodeBuffer }, {
       styleMap: [
         "p[style-name='Heading 1'] => h1:fresh",
         "p[style-name='Heading 2'] => h2:fresh",
+        "p[style-name='Heading 3'] => h2:fresh",
         "p[style-name='Tiêu đề 1'] => h1:fresh",
+        "p[style-name='Tiêu đề 2'] => h2:fresh",
+        "p[style-name='heading 1'] => h1:fresh",
+        "p[style-name='heading 2'] => h2:fresh",
       ].join('\n'),
     })
     html = result.value.normalize('NFC')
