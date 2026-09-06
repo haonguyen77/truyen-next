@@ -1,0 +1,27 @@
+.page { min-height: 100vh; background: #f7f3e9; }
+.bcBar { background: var(--navy); border-bottom: 1px solid rgba(255,255,255,0.1); position: sticky; top: var(--header-h); z-index: 100; }
+.bc { display: flex; align-items: center; gap: 8px; padding: 9px 0; font-size: 13px; flex-wrap: wrap; }
+.bcLink { color: rgba(255,255,255,0.75); }
+.bcLink:hover { color: #fff; text-decoration: underline; }
+.bcSep { color: rgba(255,255,255,0.3); }
+.bcCur { color: rgba(255,255,255,0.9); font-weight: 500; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.readerWrap { padding: 32px 24px 64px; }
+.readerCard { max-width: var(--reader-w); margin: 0 auto; }
+.chHeader { text-align: center; margin-bottom: 24px; }
+.bookName { font-size: 22px; font-weight: 800; letter-spacing: 2px; color: var(--accent); margin-bottom: 6px; font-family: system-ui; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
+.chTitle { font-size: 20px; color: var(--text-secondary); font-style: italic; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
+.ornament { margin-top: 10px; font-size: 18px; letter-spacing: 4px; color: var(--accent); }
+.navBtns { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 20px 0; flex-wrap: wrap; }
+.navBtn { display: inline-flex; align-items: center; justify-content: center; padding: 9px 20px; background: var(--accent); color: #fff; border-radius: 5px; font-size: 13px; font-weight: 600; text-decoration: none; min-width: 130px; white-space: nowrap; }
+.navBtn:hover { background: var(--accent-hover); }
+.toc { background: var(--navy); }
+.toc:hover { background: var(--navy-light); }
+.disabled { background: #ccc; color: #888; pointer-events: none; }
+.hr { border: none; border-top: 1px solid #cfc9b8; margin: 24px 0; }
+.content { padding: 4px 0; }
+.pos { text-align: center; font-size: 13px; color: var(--text-muted); margin-top: 20px; }
+@media (max-width: 768px) {
+  .readerWrap { padding: 16px 16px 48px; }
+  .bookName { font-size: 16px; }
+  .navBtn { padding: 9px 12px; min-width: 0; }
+}

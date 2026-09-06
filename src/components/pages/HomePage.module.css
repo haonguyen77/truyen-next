@@ -1,0 +1,35 @@
+.page { padding: 24px 0 64px; min-height: 100vh; }
+.sectionNew { background: #fff; border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; box-shadow: var(--shadow); }
+.newHeader { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: #d5eedc; border-bottom: 3px solid var(--accent); gap: 12px; flex-wrap: wrap; }
+.newHeaderLeft { display: flex; align-items: center; gap: 10px; }
+.newIcon { font-size: 22px; }
+.newTitle { font-size: 13px; font-weight: 800; letter-spacing: 0.8px; color: #1a1a2e; margin-bottom: 2px; }
+.newSub { font-size: 11px; color: #555; }
+.clearFilter { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 11px; font-weight: 700; padding: 0; }
+.newHeaderRight { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.importBtn { display: inline-flex; align-items: center; padding: 7px 16px; background: var(--accent); color: #fff; border-radius: 6px; font-size: 13px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.importBtn:hover { background: var(--accent-hover); }
+.tableHead { display: grid; grid-template-columns: 36px 46px 1fr 150px 110px 110px; padding: 8px 18px; background: #f5f5f0; border-bottom: 1px solid var(--border); font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; gap: 8px; }
+.row { display: grid; grid-template-columns: 36px 46px 1fr 150px 110px 110px; align-items: center; padding: 10px 18px; border-bottom: 1px solid #f0ede8; cursor: pointer; transition: background 0.1s; gap: 8px; }
+.row:last-child { border-bottom: none; }
+.row:hover { background: #f3fbf5; }
+.rowNum { font-size: 13px; color: var(--text-muted); text-align: center; }
+.rowCover { display: flex; align-items: center; }
+.rowName { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.rowTitle { font-size: 13px; color: var(--text-link); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 280px; }
+.row:hover .rowTitle { text-decoration: underline; }
+.fullBadge { padding: 1px 6px; border: 1px solid var(--accent); color: var(--accent); border-radius: 10px; font-size: 10px; font-weight: 700; flex-shrink: 0; }
+.rowAuthor { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+.rowGenre { font-size: 12px; color: var(--text-secondary); }
+.rowChap { font-size: 13px; font-weight: 600; color: var(--text-link); }
+.rowDate { font-size: 12px; color: var(--text-muted); }
+.empty { text-align: center; padding: 48px; }
+.emptyTitle { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+.emptySub { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
+.importBtnLg { display: inline-block; padding: 10px 24px; background: var(--accent); color: #fff; border-radius: 6px; font-size: 14px; font-weight: 700; text-decoration: none; }
+.pagination { display: flex; align-items: center; justify-content: center; gap: 4px; padding: 14px 18px; border-top: 1px solid #f0ede8; flex-wrap: wrap; }
+.pageBtn { min-width: 34px; height: 34px; padding: 0 8px; border: 1px solid var(--border); border-radius: 5px; background: #fff; font-size: 13px; color: #333; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.pageBtn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+.pageBtn:disabled { opacity: 0.35; cursor: not-allowed; }
+.pageBtnActive { background: var(--accent) !important; color: #fff !important; border-color: var(--accent) !important; font-weight: 700; }
+@media (max-width: 960px) { .tableHead { display: none; } .row { grid-template-columns: 28px 38px 1fr auto; grid-template-rows: auto auto; row-gap: 2px; } .rowGenre { display: none; } .rowChap { grid-column: 4; grid-row: 1; text-align: right; } .rowDate { grid-column: 3/5; grid-row: 2; font-size: 11px; } }

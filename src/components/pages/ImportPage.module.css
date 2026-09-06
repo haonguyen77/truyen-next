@@ -1,0 +1,58 @@
+.page { padding: 28px 0 60px; }
+.header { margin-bottom: 24px; }
+.title { font-size: 18px; font-weight: 800; letter-spacing: 1px; color: var(--navy); margin-bottom: 6px; }
+.sub { font-size: 14px; color: var(--text-muted); }
+
+.drop { border: 2px dashed var(--border); border-radius: 10px; background: #fff; padding: 48px 24px; text-align: center; cursor: pointer; transition: border-color 0.15s, background 0.15s; position: relative; }
+.drop:hover, .drop:focus { border-color: var(--accent); background: var(--accent-light); outline: none; }
+.dragging { border-color: var(--accent); background: var(--accent-light); }
+.dropIcon { font-size: 48px; margin-bottom: 16px; }
+.dropMain { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+.dropOr { font-size: 14px; color: var(--text-muted); margin-bottom: 12px; }
+.dropBtn { display: inline-block; padding: 10px 24px; background: var(--navy); color: #fff; border-radius: 6px; font-size: 14px; font-weight: 600; }
+.drop:hover .dropBtn { background: var(--navy-light); }
+.dropHint { font-size: 12px; color: var(--text-muted); margin-top: 12px; }
+
+.fileList { margin-top: 20px; background: #fff; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.fileListHeader { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #f0f0ec; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 700; color: var(--text-secondary); letter-spacing: 0.5px; }
+.clearBtn { background: none; border: none; color: #c0392b; font-size: 12px; cursor: pointer; }
+.clearBtn:hover { text-decoration: underline; }
+.fileItem { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--border-light); font-size: 13px; }
+.fileItem:last-of-type { border-bottom: none; }
+.fileName { flex: 1; word-break: break-all; }
+.badge { flex-shrink: 0; padding: 1px 7px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+.docxBadge { background: #e8f0fe; color: #1a5276; border: 1px solid #c5d8f5; }
+.epubBadge { background: #e8f5ee; color: #1e6840; border: 1px solid #b8e4c8; }
+.pdfBadge  { background: #fdecea; color: #a93226; border: 1px solid #f5c6c2; }
+.fileSize { color: var(--text-muted); font-size: 12px; flex-shrink: 0; }
+.importBtn { display: block; width: 100%; padding: 14px; background: var(--accent); color: #fff; border: none; font-size: 15px; font-weight: 700; cursor: pointer; transition: background 0.15s; }
+.importBtn:hover:not(:disabled) { background: var(--accent-hover); }
+.importBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.importing { text-align: center; padding: 60px 24px; color: var(--text-secondary); background: #fff; border-radius: 8px; border: 1px solid var(--border); margin-top: 20px; }
+.spinner { font-size: 40px; margin-bottom: 16px; animation: spin 1.5s linear infinite; display: inline-block; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.note { font-size: 13px; color: var(--text-muted); margin-top: 8px; }
+
+.results { margin-top: 20px; background: #fff; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.resultHeader { padding: 16px 18px; background: #f0f8f2; border-bottom: 1px solid var(--border); font-size: 15px; font-weight: 700; color: var(--accent); }
+.resultItem { display: flex; align-items: flex-start; gap: 10px; padding: 12px 18px; border-bottom: 1px solid var(--border-light); }
+.resultItem:last-of-type { border-bottom: none; }
+.resultOk { border-left: 4px solid var(--accent); }
+.resultUpdated { border-left: 4px solid #2e6db4; }
+.resultError { border-left: 4px solid #c0392b; }
+.resultIcon { font-size: 16px; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+.resultOk .resultIcon { color: var(--accent); }
+.resultUpdated .resultIcon { color: #2e6db4; }
+.resultError .resultIcon { color: #c0392b; }
+.resultInfo { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.resultFile { font-size: 13px; font-weight: 600; color: var(--text); }
+.resultTitle { font-size: 12px; color: var(--text-secondary); }
+.resultErrMsg { font-size: 12px; color: #c0392b; }
+.resultWarn { font-size: 12px; color: #b7770d; }
+.resultStatus { font-size: 12px; color: var(--text-muted); flex-shrink: 0; }
+.resultActions { display: flex; gap: 10px; padding: 16px 18px; border-top: 1px solid var(--border); justify-content: flex-end; }
+.importMoreBtn { padding: 9px 18px; background: none; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; cursor: pointer; color: var(--text-secondary); }
+.importMoreBtn:hover { border-color: #aaa; }
+.libraryBtn { padding: 9px 20px; background: var(--accent); color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; }
+.libraryBtn:hover { background: var(--accent-hover); }
