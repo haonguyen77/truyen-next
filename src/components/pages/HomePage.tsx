@@ -144,15 +144,16 @@ export default function HomePage({ books, genre }: { books: Book[]; allBooks: Bo
               {paged.map((book, i) => (
                 <div key={book.id} className={s.row} onClick={() => router.push(`/books/${book.id}`)}>
                   <span className={s.rNum}>{(page-1)*PER_PAGE + i + 1}</span>
-                  <span className={s.rCover}><BookCover title={book.title} cover={book.cover} size={34} radius={4} /></span>
+                  <span className={s.rCover}><BookCover title={book.title} cover={book.cover} size={40} radius={5} /></span>
                   <div className={s.rName}>
                     <span className={s.rTitle}>{book.title}</span>
-                    <span className={s.fullBadge}>Full</span>
-                    {book.author && <span className={s.rAuthor}>{book.author}</span>}
+                    <div className={s.rMeta}>
+                      <span className={s.fullBadge}>Full</span>
+                      <span className={s.rChap}>Chương {book.chapterCount}</span>
+                      <span className={s.rDate}>{fmtTime(book.updatedAt)}</span>
+                    </div>
                   </div>
                   <span className={s.rGenre}>{book.genres.slice(0,2).join(', ') || '—'}</span>
-                  <span className={s.rChap}>Chương {book.chapterCount}</span>
-                  <span className={s.rDate}>{fmtTime(book.updatedAt)}</span>
                 </div>
               ))}
               {totalPages > 1 && (
