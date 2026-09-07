@@ -2,6 +2,7 @@ import { getAllBooks } from '@/lib/bookService'
 import HomePage from '@/components/pages/HomePage'
 
 export const revalidate = 0
+// Force redeploy: bump timestamp
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ genre?: string }> }) {
   const { genre } = await searchParams

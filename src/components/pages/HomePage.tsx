@@ -19,7 +19,7 @@ function fmtTime(ts: number) {
 const PER_PAGE = 20
 const SECTION_LIMIT = 5
 
-export default function HomePage({ books, genre }: { books: Book[]; genre?: string }) {
+export default function HomePage({ books, genre }: { books: Book[]; allBooks: Book[]; genre?: string }) {
   const router = useRouter()
   const [page, setPage] = useState(1)
   const [readingList, setReadingList] = useState<ReadingEntry[]>([])
