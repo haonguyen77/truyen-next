@@ -231,10 +231,8 @@ function ReadingRow({ entry, navigate }: { entry: ReadingEntry; navigate: (url: 
 // ── Popular row ─────────────────────────────────────────────
 function PopularRow({ book, rank, count, onClick }: { book: Book; rank: number; count: number; onClick: () => void }) {
   void count
-  const rankCls = rank===1 ? s.rank1 : rank===2 ? s.rank2 : rank===3 ? s.rank3 : s.rankN
   return (
     <div className={s.popularRow} onClick={onClick}>
-      <span className={`${s.rankBadge} ${rankCls}`}>{rank}</span>
       <BookCover title={book.title} cover={book.cover} size={44} />
       <div className={s.popMeta}>
         <span className={s.popTitle}>{book.title}</span>
@@ -249,7 +247,6 @@ function PopularRow({ book, rank, count, onClick }: { book: Book; rank: number; 
 function FavRow({ fav, navigate }: { fav: FavoriteEntry; navigate: (url: string) => void }) {
   return (
     <div className={s.favRow} onClick={() => navigate(`/books/${fav.bookId}`)}>
-      <span className={s.favHeart}>❤</span>
       <BookCover title={fav.bookTitle} cover={fav.cover} size={44} />
       <div className={s.favMeta}>
         <span className={s.favTitle}>{fav.bookTitle}</span>

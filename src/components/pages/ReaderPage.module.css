@@ -1,25 +1,37 @@
 .page { min-height: 100vh; transition: background 0.2s; }
+
+/* Breadcrumb — sticky desktop, relative mobile */
 .bcBar { background: var(--navy); position: sticky; top: var(--header-h); z-index: 100; border-bottom: 1px solid rgba(255,255,255,0.1); }
 .bc { display: flex; align-items: center; gap: 8px; padding: 9px 0; font-size: 13px; flex-wrap: wrap; }
 .bcLink { color: rgba(255,255,255,0.75); text-decoration: none; }
 .bcLink:hover { color: #fff; text-decoration: underline; }
 .bcSep { color: rgba(255,255,255,0.3); }
 .bcCur { color: rgba(255,255,255,0.9); font-weight: 500; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 .readerWrap { padding: 32px 24px 64px; }
 .readerCard { max-width: 900px; margin: 0 auto; }
+
 .chHeader { text-align: center; margin-bottom: 24px; }
 .bookName { font-size: 22px; font-weight: 800; letter-spacing: 2px; color: var(--accent); margin-bottom: 6px; font-family: system-ui; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
 .chTitle { font-size: 20px; color: var(--text-secondary); font-style: italic; }
 .ornament { margin-top: 10px; font-size: 18px; letter-spacing: 4px; color: var(--accent); }
-.navBtns { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 20px 0; flex-wrap: wrap; }
+
+/* Nav buttons — desktop: với chữ */
+.navBtns { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 20px 0; flex-wrap: nowrap; }
 .navBtn { display: inline-flex; align-items: center; justify-content: center; padding: 9px 20px; background: var(--accent); color: #fff; border-radius: 5px; font-size: 13px; font-weight: 600; text-decoration: none; min-width: 130px; white-space: nowrap; border: none; cursor: pointer; font-family: inherit; transition: background 0.15s; }
 .navBtn:hover { background: var(--accent-hover); text-decoration: none; }
 .toc { background: var(--navy); min-width: 110px; }
 .toc:hover { background: var(--navy-light, #2a3f6b); }
-.settingsBtn { background: #5a6878; min-width: 110px; }
+.settingsBtn { background: #5a6878; min-width: 80px; }
 .settingsBtn:hover { background: #48566a; }
 .disabled { background: #ccc; color: #888; pointer-events: none; cursor: default; }
+
+/* Icon/text inside nav buttons */
+.btnIcon { flex-shrink: 0; }
+.btnText { } /* visible desktop, hidden mobile */
+
 .hr { border: none; border-top: 1px solid #cfc9b8; margin: 24px 0; }
+
 .content { padding: 4px 0; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; unicode-bidi: normal; }
 .content :global(p) { margin-bottom: 1em; text-align: justify; text-indent: 2em; }
 .content :global(h2) { font-size: 1.05em; font-weight: 700; margin: 1.6em 0 0.6em; text-indent: 0; }
@@ -29,10 +41,38 @@
 .content :global(img) { display: block; max-width: 100%; margin: 1.5em auto; border-radius: 4px; }
 .content :global(*) { background-color: transparent !important; }
 .pos { text-align: center; font-size: 13px; color: var(--text-muted); margin-top: 20px; }
+
 @media (max-width: 768px) {
+  /* Breadcrumb KHÔNG sticky trên mobile — tránh đóng băng */
+  .bcBar { position: relative; top: auto; }
+
   .readerWrap { padding: 16px 16px 48px; }
   .bookName { font-size: 16px; }
-  .navBtn { padding: 9px 12px; min-width: 0; }
   .bcCur { max-width: 140px; }
   .content :global(p) { text-indent: 1.5em; }
+
+  /* Nav buttons: 1 hàng, icon thay chữ dài */
+  .navBtns {
+    gap: 6px;
+    flex-wrap: nowrap;
+    width: 100%;
+    padding: 0 4px;
+    box-sizing: border-box;
+  }
+
+  .navBtn {
+    flex: 1;
+    min-width: 0;
+    padding: 11px 6px;
+    font-size: 20px;
+    font-weight: 400;
+    gap: 0;
+  }
+
+  /* Ẩn chữ, chỉ hiện icon */
+  .btnText { display: none; }
+  .btnIcon { font-size: 20px; }
+
+  .toc { flex: 1; }
+  .settingsBtn { flex: 1; }
 }

@@ -19,32 +19,27 @@
 .empty { display: flex; flex-direction: column; align-items: center; padding: 24px 16px; gap: 8px; color: var(--text-muted); font-size: 13px; }
 .emptyBtn { padding: 6px 14px; background: var(--accent); color: #fff; border: none; border-radius: 5px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
 
-/* Reading rows */
+/* Reading rows — tên wrap đầy đủ trên mobile */
 .readingRow { display: flex; align-items: center; gap: 11px; padding: 10px 16px; background: #fffdf5; border-bottom: 1px solid #f0e8d0; transition: background 0.1s; }
 .readingRow:last-child { border-bottom: none; }
 .readingRow:hover { background: #fff8e0; }
 .readMeta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.readTitle { background: none; border: none; text-align: left; padding: 0; font-size: 13px; font-weight: 400; color: #1a1a1a; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; font-family: inherit; }
+.readTitle { background: none; border: none; text-align: left; padding: 0; font-size: 13px; font-weight: 500; color: #1a1a1a; cursor: pointer; white-space: normal; word-break: break-word; overflow: visible; width: 100%; font-family: inherit; line-height: 1.35; }
 .readTitle:hover { color: var(--text-link); text-decoration: underline; }
 .readChap { font-size: 11px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .progWrap { display: flex; align-items: center; gap: 7px; margin-top: 2px; }
 .progBar { flex: 1; height: 5px; background: #e8e4d8; border-radius: 3px; overflow: hidden; }
 .progFill { height: 100%; background: #e8a020; border-radius: 3px; min-width: 4px; transition: width 0.3s; }
 .progPct { font-size: 11px; font-weight: 700; color: #b07010; min-width: 32px; text-align: right; }
-.continueBtn { flex-shrink: 0; padding: 6px 13px; background: #e8a020; color: #fff; border: none; border-radius: 5px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; font-family: inherit; }
+.continueBtn { flex-shrink: 0; padding: 6px 10px; background: #e8a020; color: #fff; border: none; border-radius: 5px; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap; font-family: inherit; }
 .continueBtn:hover { background: #c88010; }
 
-/* Popular rows */
+/* Popular rows — bỏ rank, tên wrap */
 .popularRow { display: flex; align-items: center; gap: 11px; padding: 10px 16px; background: #f5f9ff; border-bottom: 1px solid #deeaf8; cursor: pointer; transition: background 0.1s; }
 .popularRow:last-child { border-bottom: none; }
 .popularRow:hover { background: #e8f1ff; }
-.rankBadge { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; flex-shrink: 0; }
-.rank1 { background: #FFD700; color: #6b4800; }
-.rank2 { background: #b8bec8; color: #333; }
-.rank3 { background: #c87632; color: #fff; }
-.rankN { background: #dce8f5; color: #2e6db4; font-size: 11px; }
 .popMeta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.popTitle { font-size: 13px; font-weight: 400; color: #1a1a1a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.popTitle { font-size: 13px; font-weight: 500; color: #1a1a1a; white-space: normal; word-break: break-word; line-height: 1.35; }
 .popularRow:hover .popTitle { color: var(--text-link); }
 .popGenres { font-size: 11px; color: #888; }
 .popCount { font-size: 12px; color: #666; white-space: nowrap; flex-shrink: 0; }
@@ -56,12 +51,11 @@
 .favRow { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: #fff8fa; border-bottom: 1px solid #fce8ee; cursor: pointer; transition: background 0.1s; }
 .favRow:last-child { border-bottom: none; }
 .favRow:hover { background: #fff0f5; }
-.favHeart { color: #e05; font-size: 14px; flex-shrink: 0; }
 .favMeta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.favTitle { font-size: 13px; font-weight: 400; color: #1a1a1a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.favTitle { font-size: 13px; font-weight: 500; color: #1a1a1a; white-space: normal; word-break: break-word; line-height: 1.35; }
 .favRow:hover .favTitle { color: var(--text-link); }
 .favCount { font-size: 11px; color: #888; }
-.favReadBtn { flex-shrink: 0; padding: 5px 13px; background: #e05; color: #fff; border: none; border-radius: 5px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.favReadBtn { flex-shrink: 0; padding: 5px 11px; background: #e05; color: #fff; border: none; border-radius: 5px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; }
 .favReadBtn:hover { background: #c00; }
 
 /* Mới nhất */

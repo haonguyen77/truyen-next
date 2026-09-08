@@ -74,17 +74,35 @@ export default function ReaderClient({ book, chapter, allChapters }: {
   const NavBtns = ({ top }: { top: boolean }) => (
     <div className={s.navBtns}>
       {prev
-        ? <Link href={`/books/${book.id}/chapter/${prev.id}`} className={s.navBtn}>← Chương trước</Link>
-        : <span className={`${s.navBtn} ${s.disabled}`}>← Chương trước</span>
+        ? <Link href={`/books/${book.id}/chapter/${prev.id}`} className={s.navBtn} title="Chương trước">
+            <span className={s.btnIcon}>◀</span>
+            <span className={s.btnText}> Chương trước</span>
+          </Link>
+        : <span className={`${s.navBtn} ${s.disabled}`} title="Chương trước">
+            <span className={s.btnIcon}>◀</span>
+            <span className={s.btnText}> Chương trước</span>
+          </span>
       }
-      <Link href={`/books/${book.id}`} className={`${s.navBtn} ${s.toc}`}>☰ Mục lục</Link>
+      <Link href={`/books/${book.id}`} className={`${s.navBtn} ${s.toc}`} title="Mục lục">
+        <span className={s.btnIcon}>☰</span>
+        <span className={s.btnText}> Mục lục</span>
+      </Link>
       {top && (
         <button className={`${s.navBtn} ${s.settingsBtn}`}
-          onClick={() => setShowSettings(true)}>⚙ Cài đặt</button>
+          onClick={() => setShowSettings(true)} title="Cài đặt">
+          <span className={s.btnIcon}>⚙</span>
+          <span className={s.btnText}> Cài đặt</span>
+        </button>
       )}
       {next
-        ? <Link href={`/books/${book.id}/chapter/${next.id}`} className={s.navBtn}>Chương sau →</Link>
-        : <span className={`${s.navBtn} ${s.disabled}`}>Chương sau →</span>
+        ? <Link href={`/books/${book.id}/chapter/${next.id}`} className={s.navBtn} title="Chương sau">
+            <span className={s.btnText}>Chương sau </span>
+            <span className={s.btnIcon}>▶</span>
+          </Link>
+        : <span className={`${s.navBtn} ${s.disabled}`} title="Chương sau">
+            <span className={s.btnText}>Chương sau </span>
+            <span className={s.btnIcon}>▶</span>
+          </span>
       }
     </div>
   )
