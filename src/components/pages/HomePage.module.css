@@ -49,6 +49,21 @@
 .popGenres { font-size: 11px; color: #888; }
 .popCount { font-size: 12px; color: #666; white-space: nowrap; flex-shrink: 0; }
 
+/* Yêu thích */
+.sectionFav { background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); border: 1px solid var(--border); border-top: 3px solid #e05; margin-bottom: 20px; }
+.favHeader { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #fff0f3; border-bottom: 1px solid #fcc; gap: 10px; }
+.iconBoxFav { width: 36px; height: 36px; background: #e05; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; color: #fff; }
+.favRow { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: #fff8fa; border-bottom: 1px solid #fce8ee; cursor: pointer; transition: background 0.1s; }
+.favRow:last-child { border-bottom: none; }
+.favRow:hover { background: #fff0f5; }
+.favHeart { color: #e05; font-size: 14px; flex-shrink: 0; }
+.favMeta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.favTitle { font-size: 13px; font-weight: 400; color: #1a1a1a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.favRow:hover .favTitle { color: var(--text-link); }
+.favCount { font-size: 11px; color: #888; }
+.favReadBtn { flex-shrink: 0; padding: 5px 13px; background: #e05; color: #fff; border: none; border-radius: 5px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.favReadBtn:hover { background: #c00; }
+
 /* Mới nhất */
 .sectionNew { background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); border: 1px solid var(--border); border-top: 3px solid var(--accent); }
 .newHeader { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; background: #d5eedc; border-bottom: 1px solid #b8e4c8; gap: 12px; flex-wrap: wrap; }
@@ -60,21 +75,21 @@
 .newRight { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .importBtn { display: inline-flex; align-items: center; padding: 7px 16px; background: var(--accent); color: #fff; border-radius: 6px; font-size: 13px; font-weight: 700; text-decoration: none; white-space: nowrap; }
 .importBtn:hover { background: var(--accent-hover); }
-.tableHead { display: grid; grid-template-columns: 36px 46px 1fr 150px 110px; padding: 8px 18px; background: #f5f5f0; border-bottom: 1px solid var(--border); font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; gap: 8px; }
-.row { display: grid; grid-template-columns: 36px 46px 1fr 150px 110px; align-items: center; padding: 10px 18px; border-bottom: 1px solid #f0ede8; cursor: pointer; transition: background 0.1s; gap: 8px; }
+.tableHead { display: grid; grid-template-columns: 46px 1fr 150px 120px; padding: 8px 18px; background: #f5f5f0; border-bottom: 1px solid var(--border); font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; gap: 8px; }
+.row { display: grid; grid-template-columns: 46px 1fr 150px 120px; align-items: center; padding: 10px 18px; border-bottom: 1px solid #f0ede8; cursor: pointer; transition: background 0.1s; gap: 8px; }
 .row:last-child { border-bottom: none; }
 .row:hover { background: #f3fbf5; }
-.rNum { font-size: 13px; color: var(--text-muted); text-align: center; }
 .rCover { display: flex; align-items: center; }
 .rName { display: flex; align-items: center; gap: 6px; min-width: 0; }
-.rTitle { font-size: 13px; color: var(--text-link); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+.rTitle { font-size: 13px; color: var(--text-link); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
 .row:hover .rTitle { text-decoration: underline; }
-.fullBadge { padding: 1px 6px; border: 1px solid var(--accent); color: var(--accent); border-radius: 10px; font-size: 10px; font-weight: 700; flex-shrink: 0; }
-.rAuthor { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
-.rMeta { display: none; } /* hidden on desktop — info shown in separate columns */
+.rMeta { display: none; }            /* hidden on desktop */
 .rGenre { font-size: 12px; color: var(--text-secondary); }
-.rChap { font-size: 13px; font-weight: 600; color: var(--text-link); }
-.rDate { font-size: 12px; color: var(--text-muted); }
+.rChap { display: none; }            /* mobile only — use rChapDesk on desktop */
+.rChapDesk { font-size: 13px; font-weight: 600; color: var(--text-link); }
+.rDate { display: none; }            /* mobile only */
+.rNum { display: none; }
+.fullBadge { display: none; }        /* removed globally */
 .emptyFull { text-align: center; padding: 48px; }
 .emptyTitle { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
 .emptySub { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
@@ -86,23 +101,25 @@
 .pageBtnActive { background: var(--accent) !important; color: #fff !important; border-color: var(--accent) !important; font-weight: 700; }
 
 @media (max-width: 960px) {
-  .page { padding: 12px 0 80px; }
-  .topRow { grid-template-columns: 1fr; gap: 12px; margin-bottom: 12px; }
+  .page { padding: 0 0 80px; }
+  .topRow { grid-template-columns: 1fr; gap: 0; margin-bottom: 0; }
+  .cardReading, .cardPopular { border-radius: 0; border-left: none; border-right: none; border-bottom: none; }
   .tableHead { display: none; }
+  .sectionNew { border-radius: 0; border-left: none; border-right: none; }
+  .sectionFav { border-radius: 0; border-left: none; border-right: none; margin-bottom: 0; }
+  .newHeader { border-radius: 0; }
 
-  /* Mỗi row = card kiểu mobile giống hình mẫu */
+  /* Row → flex card */
   .row {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px 14px;
+    gap: 13px;
+    padding: 13px 16px;
     grid-template-columns: unset;
   }
 
-  .rNum { font-size: 13px; color: #bbb; min-width: 20px; text-align: center; flex-shrink: 0; }
   .rCover { flex-shrink: 0; }
 
-  /* Name block: full width, tên wrap tự do */
   .rName {
     flex: 1;
     min-width: 0;
@@ -120,38 +137,28 @@
     text-overflow: unset;
     max-width: none;
     line-height: 1.35;
-    display: block;
   }
 
-  /* Meta row: Full badge + chương + thời gian */
-  .rMeta {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
+  /* Show meta row on mobile */
+  .rMeta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .rChap { display: inline; font-size: 12px; font-weight: 600; color: var(--text-link); }
+  .rDate { display: inline; font-size: 11px; color: #aaa; }
 
-  /* Ẩn các cột riêng lẻ — thông tin đã có trong rMeta */
+  /* Hide desktop-only columns */
   .rGenre { display: none; }
-  .rChap { font-size: 12px; font-weight: 600; color: var(--text-link); }
-  .rDate { font-size: 11px; color: #aaa; }
+  .rChapDesk { display: none; }
 
-  /* Mũi tên phải */
-  .row::after {
-    content: '›';
-    font-size: 22px;
-    color: #ccc;
-    flex-shrink: 0;
-    line-height: 1;
-  }
+  /* Arrow indicator */
+  .row::after { content: '›'; font-size: 22px; color: #ddd; flex-shrink: 0; line-height: 1; }
+
+  .pagination { padding: 12px 16px; }
 }
 
 @media (max-width: 600px) {
-  .page { padding: 8px 0 80px; }
-  .cardHeader { padding: 10px 12px; }
-  .readingRow, .popularRow { padding: 10px 12px; }
-  .newHeader { padding: 10px 12px; }
+  .cardHeader { padding: 10px 16px; }
+  .readingRow, .popularRow { padding: 10px 16px; }
+  .newHeader { padding: 10px 16px; }
   .importBtn { padding: 6px 12px; font-size: 12px; }
-  .row { padding: 11px 12px; }
+  .row { padding: 12px 16px; }
   .rTitle { font-size: 14px; }
 }

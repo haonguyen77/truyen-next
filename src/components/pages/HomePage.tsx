@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import BookCover from '@/components/BookCover'
 import { getReadingHistory, getTopReadBooks, type ReadingEntry } from '@/lib/readingProgress'
+import { getFavorites, type FavoriteEntry } from '@/lib/favorites'
 import s from './HomePage.module.css'
 
 type Book = { id: string; title: string; author: string; genres: string[]; cover: string; chapterCount: number; createdAt: number; updatedAt: number }
@@ -24,11 +25,12 @@ export default function HomePage({ books, genre }: { books: Book[]; allBooks: Bo
   const [page, setPage] = useState(1)
   const [readingList, setReadingList] = useState<ReadingEntry[]>([])
   const [topBooks, setTopBooks] = useState<{ book: Book; count: number }[]>([])
+  const [favorites, setFavorites] = useState<FavoriteEntry[]>([])
   const [showAllReading, setShowAllReading] = useState(false)
   const [showAllTop, setShowAllTop] = useState(false)
+  const [showAllFav, setShowAllFav] = useState(false)
 
   useEffect(() => {
-    // Load from localStorage on client
     const history = getReadingHistory(50).filter(e => books.some(b => b.id === e.bookId))
     setReadingList(history)
     const topRaw = getTopReadBooks(20)
@@ -36,12 +38,16 @@ export default function HomePage({ books, genre }: { books: Book[]; allBooks: Bo
       .map(({ bookId, count }) => ({ book: books.find(b => b.id === bookId), count }))
       .filter((r): r is { book: Book; count: number } => !!r.book)
     setTopBooks(resolved)
+    // Load favorites — filter to only books that exist in current library
+    const favs = getFavorites().filter(f => books.some(b => b.id === f.bookId))
+    setFavorites(favs)
   }, [books])
 
   const totalPages = Math.max(1, Math.ceil(books.length / PER_PAGE))
   const paged = books.slice((page - 1) * PER_PAGE, page * PER_PAGE)
   const visReading = showAllReading ? readingList : readingList.slice(0, SECTION_LIMIT)
   const visTop = showAllTop ? topBooks : topBooks.slice(0, SECTION_LIMIT)
+  const visFav = showAllFav ? favorites : favorites.slice(0, SECTION_LIMIT)
 
   return (
     <div className={s.page}>
@@ -108,9 +114,33 @@ export default function HomePage({ books, genre }: { books: Book[]; allBooks: Bo
           </section>
         </div>
 
+        {/* ══ YÊU THÍCH ══ */}
+        {favorites.length > 0 && (
+          <section className={s.sectionFav}>
+            <div className={s.favHeader}>
+              <div className={s.cardLeft}>
+                <span className={s.iconBoxFav}>❤</span>
+                <div>
+                  <h2 className={s.cardTitle}>TRUYỆN YÊU THÍCH</h2>
+                  <p className={s.cardSub}>Những truyện bạn đã đánh dấu yêu thích</p>
+                </div>
+              </div>
+              {favorites.length > SECTION_LIMIT && (
+                <button className={s.seeMore} onClick={() => setShowAllFav(v => !v)}>
+                  {showAllFav ? 'Thu gọn ←' : `Xem thêm (${favorites.length}) →`}
+                </button>
+              )}
+            </div>
+            <div className={s.listBody}>
+              {visFav.map(fav => (
+                <FavRow key={fav.bookId} fav={fav} navigate={router.push.bind(router)} />
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* ══ Mới nhất ══ */}
-        <section className={s.sectionNew} id="sec-new">
-          <div className={s.newHeader}>
+        <section className={s.sectionNew} id="sec-new">          <div className={s.newHeader}>
             <div className={s.newLeft}>
               <span className={s.newIcon}>📚</span>
               <div>
@@ -138,22 +168,23 @@ export default function HomePage({ books, genre }: { books: Book[]; allBooks: Bo
           ) : (
             <>
               <div className={s.tableHead}>
-                <span>#</span><span/><span>TÊN TRUYỆN</span>
-                <span>THỂ LOẠI</span><span>SỐ CHƯƠNG</span><span>CẬP NHẬT</span>
+                <span/><span>TÊN TRUYỆN</span>
+                <span>THỂ LOẠI</span><span>SỐ CHƯƠNG</span>
               </div>
               {paged.map((book, i) => (
                 <div key={book.id} className={s.row} onClick={() => router.push(`/books/${book.id}`)}>
-                  <span className={s.rNum}>{(page-1)*PER_PAGE + i + 1}</span>
                   <span className={s.rCover}><BookCover title={book.title} cover={book.cover} size={40} radius={5} /></span>
                   <div className={s.rName}>
                     <span className={s.rTitle}>{book.title}</span>
+                    {/* Mobile: chương + thời gian dưới tên */}
                     <div className={s.rMeta}>
-                      <span className={s.fullBadge}>Full</span>
                       <span className={s.rChap}>Chương {book.chapterCount}</span>
                       <span className={s.rDate}>{fmtTime(book.updatedAt)}</span>
                     </div>
                   </div>
+                  {/* Desktop only columns */}
                   <span className={s.rGenre}>{book.genres.slice(0,2).join(', ') || '—'}</span>
+                  <span className={s.rChapDesk}>Chương {book.chapterCount}</span>
                 </div>
               ))}
               {totalPages > 1 && (
@@ -210,6 +241,26 @@ function PopularRow({ book, rank, count, onClick }: { book: Book; rank: number; 
         {book.genres.length > 0 && <span className={s.popGenres}>{book.genres.slice(0,2).join(' · ')}</span>}
       </div>
       <span className={s.popCount}>🔥 {book.chapterCount} chương</span>
+    </div>
+  )
+}
+
+// ── Favorite row ─────────────────────────────────────────────
+function FavRow({ fav, navigate }: { fav: FavoriteEntry; navigate: (url: string) => void }) {
+  return (
+    <div className={s.favRow} onClick={() => navigate(`/books/${fav.bookId}`)}>
+      <span className={s.favHeart}>❤</span>
+      <BookCover title={fav.bookTitle} cover={fav.cover} size={44} />
+      <div className={s.favMeta}>
+        <span className={s.favTitle}>{fav.bookTitle}</span>
+        <span className={s.favCount}>{fav.chapterCount} chương</span>
+      </div>
+      <button
+        className={s.favReadBtn}
+        onClick={e => { e.stopPropagation(); navigate(`/books/${fav.bookId}`) }}
+      >
+        Đọc ngay
+      </button>
     </div>
   )
 }

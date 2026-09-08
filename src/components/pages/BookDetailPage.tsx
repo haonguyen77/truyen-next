@@ -1,9 +1,10 @@
 'use client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import BookCover from '@/components/BookCover'
 import { removeFromHistory, removeReadCount } from '@/lib/readingProgress'
+import { isFavorite, toggleFavorite } from '@/lib/favorites'
 import s from './BookDetailPage.module.css'
 
 type Book = { id: string; title: string; author: string; description: string; cover: string; genres: string[]; chapterCount: number }
@@ -17,7 +18,23 @@ export default function BookDetailClient({ book: initBook, chapters: initChapter
   const [editing, setEditing] = useState<{ title: string; author: string; description: string; genres: string; cover: string } | null>(null)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [favorited, setFavorited] = useState(false)
   const coverRef = useRef<HTMLInputElement>(null)
+
+  // Load favorite state on client
+  useEffect(() => {
+    setFavorited(isFavorite(book.id))
+  }, [book.id])
+
+  const handleToggleFavorite = () => {
+    const isNowFav = toggleFavorite({
+      bookId: book.id,
+      bookTitle: book.title,
+      cover: book.cover,
+      chapterCount: book.chapterCount,
+    })
+    setFavorited(isNowFav)
+  }
 
   const emptyCount = chapters.filter(c => c.wordCount === 0).length
 
@@ -102,6 +119,13 @@ export default function BookDetailClient({ book: initBook, chapters: initChapter
             <div className={s.titleRow}>
               <h1 className={s.title}>{book.title}</h1>
               <div className={s.actionBtns}>
+                <button
+                  className={`${s.favBtn} ${favorited ? s.favActive : ''}`}
+                  onClick={handleToggleFavorite}
+                  title={favorited ? 'Bỏ yêu thích' : 'Thêm yêu thích'}
+                >
+                  {favorited ? '❤' : '♡'} {favorited ? 'Yêu thích' : 'Yêu thích'}
+                </button>
                 <button className={s.editBtn} onClick={openEdit}>✏ Sửa</button>
                 {emptyCount > 0 && (
                   <button className={s.warnBtn} onClick={handleDeleteEmpty}>

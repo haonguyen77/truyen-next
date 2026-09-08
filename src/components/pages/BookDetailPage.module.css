@@ -11,6 +11,9 @@
 .actionBtns { display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
 .editBtn { padding: 6px 14px; background: var(--navy); color: #fff; border: none; border-radius: 5px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; font-family: inherit; }
 .editBtn:hover { background: var(--navy-light, #2a3f6b); }
+.favBtn { padding: 6px 14px; background: none; border: 1.5px solid #e0e0e0; border-radius: 5px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; font-family: inherit; color: #666; transition: all 0.15s; }
+.favBtn:hover { border-color: #e05; color: #e05; background: #fff0f3; }
+.favActive { background: #fff0f3 !important; border-color: #e05 !important; color: #e05 !important; }
 .warnBtn { padding: 6px 12px; background: none; border: 1px solid #b7770d; color: #b7770d; border-radius: 5px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; font-family: inherit; }
 .warnBtn:hover { background: #fef9ec; }
 .delBtn { padding: 6px 12px; background: none; border: 1px solid #c0392b; color: #c0392b; border-radius: 5px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; font-family: inherit; }
