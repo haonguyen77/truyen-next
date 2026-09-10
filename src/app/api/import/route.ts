@@ -293,8 +293,16 @@ export async function POST(req: Request) {
 
   if (!files.length) return NextResponse.json({ error: 'No files' }, { status: 400 })
 
-  // Lightweight: only id+title needed for duplicate detection (avoids loading cover base64)
-  const allBooks = await getBookTitles()
+  // Client already checks duplicates against /api/books/titles before uploading.
+  // skipDupCheck=true → server trusts client and skips the per-request title query (fast path).
+  // existingBookId → provided by client when dupAction is 'update' (avoids re-lookup).
+  const skipDupCheck = formData.get('skipDupCheck') === 'true'
+  const clientExistingId = (formData.get('existingBookId') as string | null) ?? undefined
+
+  // Only query existing titles when we actually need to detect a duplicate.
+  // (i.e. client did NOT pre-filter and no decision was passed)
+  const needsLookup = !skipDupCheck && !clientExistingId
+  const allBooks = needsLookup ? await getBookTitles() : []
   const results = []
 
   for (const file of files) {
@@ -325,7 +333,12 @@ export async function POST(req: Request) {
       continue
     }
 
-    const existing = allBooks.find(b => normalizeVietnamese(b.title) === normalizeVietnamese(parsed.title))
+    // Determine the existing book:
+    // - if client passed existingBookId (from its own dup check) → use it directly (no query)
+    // - else look it up in the fetched titles (only when needsLookup)
+    const existing = clientExistingId
+      ? { id: clientExistingId }
+      : allBooks.find(b => normalizeVietnamese(b.title) === normalizeVietnamese(parsed.title))
 
     // ── Duplicate handling ──
     // If book exists in library AND no action decided → ask user

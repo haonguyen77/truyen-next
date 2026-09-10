@@ -29,8 +29,8 @@ function normTitle(s: string): string {
   return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/\s+/g, ' ').trim()
 }
 
-// Max files uploaded in parallel (B). Keep small to respect serverless limits.
-const CONCURRENCY = 3
+// Max files uploaded in parallel. 6 balances speed vs Vercel concurrent-function limits.
+const CONCURRENCY = 6
 
 export default function ImportPage() {
   const router = useRouter()
@@ -49,9 +49,9 @@ export default function ImportPage() {
   // Deleted-log warnings (before upload)
   const [deletedDupes, setDeletedDupes] = useState<{ file: File; title: string }[]>([])
 
-  // Library titles (fetched once) — for instant client-side duplicate check
-  const [libraryTitles, setLibraryTitles] = useState<Set<string>>(new Set())
-  const [libDupes, setLibDupes] = useState<{ file: File; title: string }[]>([])
+  // Library titles (fetched once) — Map<normalizedTitle, bookId> for instant client-side dup check
+  const [libraryTitles, setLibraryTitles] = useState<Map<string, string>>(new Map())
+  const [libDupes, setLibDupes] = useState<{ file: File; title: string; bookId: string }[]>([])
   const [checkingLib, setCheckingLib] = useState(false)
 
   // Import flow
@@ -78,18 +78,21 @@ export default function ImportPage() {
     fetch('/api/books/titles')
       .then(r => r.ok ? r.json() : [])
       .then((rows: { id: string; title: string }[]) => {
-        setLibraryTitles(new Set(rows.map(r => normTitle(r.title))))
+        const map = new Map<string, string>()
+        for (const r of rows) map.set(normTitle(r.title), r.id)
+        setLibraryTitles(map)
       })
       .catch(() => {})
       .finally(() => setCheckingLib(false))
   }, [])
 
   // Re-check library duplicates whenever files or the fetched titles change
-  const recomputeLibDupes = useCallback((arr: File[], titles: Set<string>) => {
-    const dupes: { file: File; title: string }[] = []
+  const recomputeLibDupes = useCallback((arr: File[], titles: Map<string, string>) => {
+    const dupes: { file: File; title: string; bookId: string }[] = []
     for (const f of arr) {
       const t = fileNameToTitle(f.name)
-      if (titles.has(normTitle(t))) dupes.push({ file: f, title: t })
+      const id = titles.get(normTitle(t))
+      if (id) dupes.push({ file: f, title: t, bookId: id })
     }
     setLibDupes(dupes)
   }, [])
@@ -134,11 +137,17 @@ export default function ImportPage() {
   }
 
   // ── Send one file to API ──
-  const importFile = async (file: File, dupAction?: DupAction): Promise<ImportResult[]> => {
+  const importFile = async (
+    file: File,
+    dupAction?: DupAction,
+    opts?: { skipDupCheck?: boolean; existingBookId?: string }
+  ): Promise<ImportResult[]> => {
     const fd = new FormData()
     fd.append('files', file)
     fd.append('genres', JSON.stringify(selected))
     if (dupAction) fd.append('dupAction', dupAction)
+    if (opts?.skipDupCheck) fd.append('skipDupCheck', 'true')
+    if (opts?.existingBookId) fd.append('existingBookId', opts.existingBookId)
 
     try {
       const res = await fetch('/api/import', { method: 'POST', body: fd })
@@ -173,14 +182,32 @@ export default function ImportPage() {
     const foundDupes: ImportResult[] = []
     let done = 0
 
-    // Process in parallel batches of CONCURRENCY (B), no artificial delay (C)
-    const queue = [...files]
+    // Split client-side: duplicates go straight to the resolve screen (no server round-trip);
+    // new files get skipDupCheck=true so the server skips the per-request title query (cách 2).
+    const dupFileSet = new Map<File, { title: string; bookId: string }>()
+    libDupes.forEach(d => dupFileSet.set(d.file, { title: d.title, bookId: d.bookId }))
+
+    for (const d of libDupes) {
+      foundDupes.push({
+        fileName: d.file.name,
+        status: 'duplicate',
+        title: d.title,
+        existingBookId: d.bookId,
+        duplicateType: 'library',
+      })
+    }
+
+    const newFiles = files.filter(f => !dupFileSet.has(f))
+    setProcessed(0)
+
+    // Upload new (non-duplicate) files in parallel, telling server to skip dup check (cách 1 + 2)
+    const queue = [...newFiles]
     const worker = async () => {
       while (queue.length) {
         const file = queue.shift()
         if (!file) break
         setCurrentFile(file.name)
-        const res = await importFile(file)  // no dupAction → detect duplicate
+        const res = await importFile(file, undefined, { skipDupCheck: true })
         for (const r of res) {
           if (r.status === 'duplicate') foundDupes.push(r)
           else allResults.push(r)
@@ -189,13 +216,13 @@ export default function ImportPage() {
         setProcessed(done)
       }
     }
-    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, files.length) }, worker))
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, newFiles.length || 1) }, worker))
 
     setResults(allResults)
     setDuplicates(foundDupes)
     setImporting(false)
     setCurrentFile('')
-  }, [files, selected])
+  }, [files, selected, libDupes])
 
   // ── Resolve duplicates (after user chooses actions) ──
   const handleResolveDuplicates = async () => {
@@ -219,7 +246,11 @@ export default function ImportPage() {
         const file = files.find(f => f.name === dup.fileName)
         if (!file) continue
         setCurrentFile(dup.fileName)
-        const res = await importFile(file, action)
+        // Pass existingBookId so server updates the right book without re-querying (cách 2)
+        const res = await importFile(file, action, {
+          skipDupCheck: true,
+          existingBookId: dup.existingBookId,
+        })
         newResults.push(...res)
         done++
         setProcessed(done)
@@ -242,7 +273,9 @@ export default function ImportPage() {
   const ext = (n: string) => n.toLowerCase().split('.').pop() ?? ''
   const badgeClass = (n: string) => ext(n) === 'epub' ? s.epubBadge : ext(n) === 'pdf' ? s.pdfBadge : s.docxBadge
   const importedCount = results?.filter(r => r.status === 'imported' || r.status === 'updated').length ?? 0
-  const progressTotal = duplicates.length > 0 ? duplicates.length : files.length
+  const progressTotal = duplicates.length > 0
+    ? duplicates.length
+    : Math.max(1, files.length - libDupes.length)
   const progressPct = progressTotal > 0 ? Math.round((processed / progressTotal) * 100) : 0
 
   return (
