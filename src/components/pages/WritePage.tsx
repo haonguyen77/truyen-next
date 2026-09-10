@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import BookCover from '@/components/BookCover'
+import { useImageResize } from '@/lib/useImageResize'
 import s from './WritePage.module.css'
 
 function genId() { return crypto.randomUUID() }
@@ -19,6 +20,7 @@ export default function WritePage() {
   const [saving, setSaving] = useState(false)
   const editorRef = useRef<HTMLDivElement>(null)
   const coverRef = useRef<HTMLInputElement>(null)
+  const { selected, box, startDrag, scaleSelected } = useImageResize(editorRef)
 
   const sync = useCallback(() => {
     if (!editorRef.current) return
@@ -161,13 +163,21 @@ export default function WritePage() {
             ))}
             <span className={s.sep}/>
             <button className={s.toolBtnIcon} onClick={() => { const i = document.createElement('input'); i.type='file'; i.accept='image/*'; i.onchange=()=>{ const f=i.files?.[0]; if(!f) return; const r=new FileReader(); r.onload=ev=>exec('insertHTML',`<img src="${ev.target?.result}" style="max-width:100%" />`); r.readAsDataURL(f) }; i.click() }}>🖼 Hình</button>
+            <button className={s.toolBtnIcon} onClick={() => { if (!scaleSelected(0.5)) alert('Bấm vào ảnh trước để thu nhỏ.') }} title="Thu nhỏ ảnh đang chọn còn 50%">↘ 50%</button>
             <span className={s.sep}/>
             <button className={s.toolBtn} onClick={() => exec('undo')}>↩</button>
             <button className={s.toolBtn} onClick={() => exec('redo')}>↪</button>
           </div>
 
-          <div ref={editorRef} className={s.editor} contentEditable suppressContentEditableWarning
-            onInput={sync} onPaste={handlePaste} data-placeholder="Bắt đầu viết nội dung..." spellCheck={false} />
+          <div className={s.editorWrap}>
+            <div ref={editorRef} className={s.editor} contentEditable suppressContentEditableWarning
+              onInput={sync} onPaste={handlePaste} data-placeholder="Bắt đầu viết nội dung..." spellCheck={false} />
+            {selected && box && (
+              <div className={s.resizeBox} style={{ top: box.top, left: box.left, width: box.width, height: box.height }}>
+                <span className={`${s.handle} ${s.hSE}`} onMouseDown={startDrag} />
+              </div>
+            )}
+          </div>
 
           <div className={s.editorFooter}>
             <span>{wc} từ</span>

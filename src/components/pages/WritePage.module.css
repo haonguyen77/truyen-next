@@ -40,7 +40,12 @@
 .toolBtn:hover { background: #f0f0f0; border-color: #ddd; }
 .toolBtnIcon { padding: 4px 8px; background: none; border: 1px solid transparent; border-radius: 4px; font-size: 12px; cursor: pointer; color: #333; height: 28px; display: flex; align-items: center; gap: 3px; font-family: inherit; white-space: nowrap; }
 .toolBtnIcon:hover { background: #f0f0f0; border-color: #ddd; }
+.editorWrap { flex: 1; position: relative; display: flex; overflow: hidden; }
 .editor { flex: 1; padding: 28px 48px; overflow-y: auto; background: #fff; margin: 12px 20px; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); font-family: 'Times New Roman', serif; font-size: 16px; line-height: 1.8; color: var(--text); outline: none; min-height: 400px; }
+.editor img { cursor: pointer; }
+.resizeBox { position: absolute; border: 2px solid var(--accent); pointer-events: none; box-sizing: border-box; z-index: 5; }
+.handle { position: absolute; width: 14px; height: 14px; background: var(--accent); border: 2px solid #fff; border-radius: 50%; pointer-events: auto; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+.hSE { right: -8px; bottom: -8px; cursor: nwse-resize; }
 .editor:empty::before { content: attr(data-placeholder); color: #bbb; pointer-events: none; }
 .editor * { background-color: transparent !important; font-family: inherit; }
 .editor p { margin: 0 0 0.8em; }

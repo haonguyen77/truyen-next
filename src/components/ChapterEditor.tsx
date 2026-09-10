@@ -1,5 +1,6 @@
 'use client'
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { useImageResize } from '@/lib/useImageResize'
 import s from './ChapterEditor.module.css'
 
 interface Props {
@@ -15,6 +16,7 @@ export default function ChapterEditor({ bookId, chapterId, initialTitle, onClose
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const editorRef = useRef<HTMLDivElement>(null)
+  const { selected, box, startDrag, scaleSelected } = useImageResize(editorRef)
 
   // Load current chapter content
   useEffect(() => {
@@ -111,15 +113,23 @@ export default function ChapterEditor({ bookId, chapterId, initialTitle, onClose
           ))}
           <span className={s.sep} />
           <button className={s.toolBtnIcon} onClick={insertImage}>🖼 Hình</button>
+          <button className={s.toolBtnIcon} onClick={() => { if (!scaleSelected(0.5)) alert('Bấm vào ảnh trước để thu nhỏ.') }}
+            title="Thu nhỏ ảnh đang chọn còn 50%">↘ 50%</button>
           <span className={s.sep} />
           <button className={s.toolBtn} onClick={() => exec('undo')}>↩</button>
           <button className={s.toolBtn} onClick={() => exec('redo')}>↪</button>
         </div>
 
         {loading && <div className={s.loading}>Đang tải nội dung...</div>}
-        <div ref={editorRef} className={s.editor} contentEditable={!loading} suppressContentEditableWarning
-          onPaste={handlePaste} data-placeholder="Nội dung chương..." spellCheck={false}
-          style={loading ? { visibility: 'hidden' } : undefined} />
+        <div className={s.editorWrap} style={loading ? { visibility: 'hidden' } : undefined}>
+          <div ref={editorRef} className={s.editor} contentEditable={!loading} suppressContentEditableWarning
+            onPaste={handlePaste} data-placeholder="Nội dung chương..." spellCheck={false} />
+          {selected && box && (
+            <div className={s.resizeBox} style={{ top: box.top, left: box.left, width: box.width, height: box.height }}>
+              <span className={`${s.handle} ${s.hSE}`} onMouseDown={startDrag} />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
