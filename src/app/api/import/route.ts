@@ -5,7 +5,7 @@
  */
 import { NextResponse } from 'next/server'
 import { generateId, fileNameToTitle } from '@/lib/generateId'
-import { createBook, saveChapters, deleteChaptersByBook, getAllBooks, updateBook } from '@/lib/bookService'
+import { createBook, saveChapters, deleteChaptersByBook, getBookTitles, updateBook } from '@/lib/bookService'
 import { normalizeVietnamese } from '@/lib/normalizeVietnamese'
 
 interface ParsedChapter { index: number; title: string; content: string; wordCount: number }
@@ -293,7 +293,8 @@ export async function POST(req: Request) {
 
   if (!files.length) return NextResponse.json({ error: 'No files' }, { status: 400 })
 
-  const allBooks = await getAllBooks()
+  // Lightweight: only id+title needed for duplicate detection (avoids loading cover base64)
+  const allBooks = await getBookTitles()
   const results = []
 
   for (const file of files) {

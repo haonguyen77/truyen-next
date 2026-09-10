@@ -45,6 +45,11 @@ export async function getBook(id: string) {
   return row ? toBookClient(row) : null
 }
 
+// Lightweight: chỉ id + title, dùng cho kiểm tra trùng phía client (không tải cover/nội dung)
+export async function getBookTitles() {
+  return db.select({ id: books.id, title: books.title }).from(books)
+}
+
 export async function createBook(data: CreateBookInput) {
   const now = new Date()
   const [row] = await db.insert(books).values({

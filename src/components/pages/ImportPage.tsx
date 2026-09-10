@@ -24,6 +24,14 @@ const USAGE_KEY = 'genre-usage-counts'
 function loadUsage(): Record<string, number> { try { return JSON.parse(localStorage.getItem(USAGE_KEY) ?? '{}') } catch { return {} } }
 function saveUsage(c: Record<string, number>) { try { localStorage.setItem(USAGE_KEY, JSON.stringify(c)) } catch {} }
 
+// Must mirror server-side normalizeVietnamese for consistent duplicate detection
+function normTitle(s: string): string {
+  return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/\s+/g, ' ').trim()
+}
+
+// Max files uploaded in parallel (B). Keep small to respect serverless limits.
+const CONCURRENCY = 3
+
 export default function ImportPage() {
   const router = useRouter()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -40,6 +48,11 @@ export default function ImportPage() {
 
   // Deleted-log warnings (before upload)
   const [deletedDupes, setDeletedDupes] = useState<{ file: File; title: string }[]>([])
+
+  // Library titles (fetched once) — for instant client-side duplicate check
+  const [libraryTitles, setLibraryTitles] = useState<Set<string>>(new Set())
+  const [libDupes, setLibDupes] = useState<{ file: File; title: string }[]>([])
+  const [checkingLib, setCheckingLib] = useState(false)
 
   // Import flow
   const [importing, setImporting] = useState(false)
@@ -58,7 +71,32 @@ export default function ImportPage() {
   })
   const visibleGenres = expanded ? sortedGenres : sortedGenres.slice(0, 10)
 
-  useEffect(() => { setUsageCounts(loadUsage()) }, [])
+  useEffect(() => {
+    setUsageCounts(loadUsage())
+    // Fetch existing titles once (lightweight) for instant duplicate detection (A)
+    setCheckingLib(true)
+    fetch('/api/books/titles')
+      .then(r => r.ok ? r.json() : [])
+      .then((rows: { id: string; title: string }[]) => {
+        setLibraryTitles(new Set(rows.map(r => normTitle(r.title))))
+      })
+      .catch(() => {})
+      .finally(() => setCheckingLib(false))
+  }, [])
+
+  // Re-check library duplicates whenever files or the fetched titles change
+  const recomputeLibDupes = useCallback((arr: File[], titles: Set<string>) => {
+    const dupes: { file: File; title: string }[] = []
+    for (const f of arr) {
+      const t = fileNameToTitle(f.name)
+      if (titles.has(normTitle(t))) dupes.push({ file: f, title: t })
+    }
+    setLibDupes(dupes)
+  }, [])
+
+  useEffect(() => {
+    recomputeLibDupes(files, libraryTitles)
+  }, [files, libraryTitles, recomputeLibDupes])
 
   const toggleGenre = (g: string) => setSelected(p => p.includes(g) ? p.filter(x => x !== g) : [...p, g])
   const addCustom = (v: string) => { const t = v.trim(); if (t && !selected.includes(t)) setSelected(p => [...p, t]); setCustomInput('') }
@@ -84,6 +122,7 @@ export default function ImportPage() {
   const removeFile = (file: File) => {
     setFiles(prev => prev.filter(f => f !== file))
     setDeletedDupes(prev => prev.filter(d => d.file !== file))
+    setLibDupes(prev => prev.filter(d => d.file !== file))
   }
 
   // ── Send one file to API ──
@@ -124,18 +163,25 @@ export default function ImportPage() {
 
     const allResults: ImportResult[] = []
     const foundDupes: ImportResult[] = []
+    let done = 0
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i]
-      setCurrentFile(file.name)
-      setProcessed(i + 1)
-      const res = await importFile(file)  // no dupAction → detect duplicate
-      for (const r of res) {
-        if (r.status === 'duplicate') foundDupes.push(r)
-        else allResults.push(r)
+    // Process in parallel batches of CONCURRENCY (B), no artificial delay (C)
+    const queue = [...files]
+    const worker = async () => {
+      while (queue.length) {
+        const file = queue.shift()
+        if (!file) break
+        setCurrentFile(file.name)
+        const res = await importFile(file)  // no dupAction → detect duplicate
+        for (const r of res) {
+          if (r.status === 'duplicate') foundDupes.push(r)
+          else allResults.push(r)
+        }
+        done++
+        setProcessed(done)
       }
-      await new Promise(r => setTimeout(r, 60))
     }
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, files.length) }, worker))
 
     setResults(allResults)
     setDuplicates(foundDupes)
@@ -151,19 +197,27 @@ export default function ImportPage() {
       return
     }
     setImporting(true)
+    setProcessed(0)
     const newResults = [...(results ?? [])]
 
-    for (let i = 0; i < duplicates.length; i++) {
-      const dup = duplicates[i]
-      const action = dupActions[dup.fileName]
-      const file = files.find(f => f.name === dup.fileName)
-      if (!file) continue
-      setCurrentFile(dup.fileName)
-      setProcessed(i + 1)
-      const res = await importFile(file, action)
-      newResults.push(...res)
-      await new Promise(r => setTimeout(r, 60))
+    // Resolve duplicates in parallel batches too (B, C)
+    const queue = duplicates.filter(d => files.some(f => f.name === d.fileName))
+    let done = 0
+    const worker = async () => {
+      while (queue.length) {
+        const dup = queue.shift()
+        if (!dup) break
+        const action = dupActions[dup.fileName]
+        const file = files.find(f => f.name === dup.fileName)
+        if (!file) continue
+        setCurrentFile(dup.fileName)
+        const res = await importFile(file, action)
+        newResults.push(...res)
+        done++
+        setProcessed(done)
+      }
     }
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, queue.length) }, worker))
 
     setResults(newResults)
     setDuplicates([])
@@ -180,7 +234,8 @@ export default function ImportPage() {
   const ext = (n: string) => n.toLowerCase().split('.').pop() ?? ''
   const badgeClass = (n: string) => ext(n) === 'epub' ? s.epubBadge : ext(n) === 'pdf' ? s.pdfBadge : s.docxBadge
   const importedCount = results?.filter(r => r.status === 'imported' || r.status === 'updated').length ?? 0
-  const progressPct = files.length > 0 ? Math.round((processed / files.length) * 100) : 0
+  const progressTotal = duplicates.length > 0 ? duplicates.length : files.length
+  const progressPct = progressTotal > 0 ? Math.round((processed / progressTotal) * 100) : 0
 
   return (
     <div className={s.page}>
@@ -229,6 +284,26 @@ export default function ImportPage() {
                   </div>
                 ))}
               </div>
+            )}
+
+            {/* Library-duplicate warning (instant, client-side check) */}
+            {libDupes.length > 0 && (
+              <div className={s.libWarn}>
+                <div className={s.libWarnHeader}>
+                  🔁 {libDupes.length} file trùng tên với truyện ĐANG CÓ trong thư viện
+                </div>
+                <p className={s.libWarnDesc}>
+                  Khi import, bạn sẽ được chọn: bỏ qua, cập nhật, hoặc tạo mới cho từng truyện.
+                </p>
+                <div className={s.libWarnList}>
+                  {libDupes.map((d, i) => (
+                    <span key={i} className={s.libWarnTag}>📘 {d.title}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {checkingLib && files.length > 0 && (
+              <p className={s.libChecking}>Đang kiểm tra trùng với thư viện...</p>
             )}
 
             {/* Genre selector */}
@@ -337,7 +412,7 @@ export default function ImportPage() {
           <div className={s.importing}>
             <div className={s.progressBar}><div className={s.progressFill} style={{ width: `${progressPct}%` }} /></div>
             <p className={s.progressText}><span className={s.spinner}>⚙️</span> Đang xử lý: <strong>{currentFile}</strong></p>
-            <p className={s.progressCount}>{processed} / {files.length} file — {progressPct}%</p>
+            <p className={s.progressCount}>{processed} / {progressTotal} file — {progressPct}%</p>
           </div>
         )}
 

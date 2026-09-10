@@ -171,3 +171,11 @@
   .deletedActions { justify-content: stretch; }
   .deletedKeep, .deletedRemove { flex: 1; }
 }
+
+/* ── Library-duplicate warning (instant client check) ── */
+.libWarn { margin-top: 16px; background: #eff6ff; border: 1px solid #93c5fd; border-radius: 8px; padding: 14px 16px; }
+.libWarnHeader { font-size: 14px; font-weight: 700; color: #1d4ed8; margin-bottom: 4px; }
+.libWarnDesc { font-size: 12px; color: #1e40af; margin-bottom: 10px; }
+.libWarnList { display: flex; flex-wrap: wrap; gap: 6px; }
+.libWarnTag { font-size: 12px; font-weight: 600; color: #1e3a8a; background: #dbeafe; border: 1px solid #bfdbfe; border-radius: 5px; padding: 4px 10px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.libChecking { margin-top: 12px; font-size: 12px; color: var(--text-muted); font-style: italic; }
