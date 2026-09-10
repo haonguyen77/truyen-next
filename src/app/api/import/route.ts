@@ -287,6 +287,10 @@ export async function POST(req: Request) {
     try { importGenres = JSON.parse(genresRaw) } catch { importGenres = [] }
   }
 
+  // dupAction: 'skip' | 'update' | 'create' | undefined
+  // When undefined and a duplicate is found → return status 'duplicate' for user to decide
+  const dupAction = (formData.get('dupAction') as string | null) ?? undefined
+
   if (!files.length) return NextResponse.json({ error: 'No files' }, { status: 400 })
 
   const allBooks = await getAllBooks()
@@ -322,11 +326,33 @@ export async function POST(req: Request) {
 
     const existing = allBooks.find(b => normalizeVietnamese(b.title) === normalizeVietnamese(parsed.title))
 
+    // ── Duplicate handling ──
+    // If book exists in library AND no action decided → ask user
+    if (existing && !dupAction) {
+      results.push({
+        fileName: file.name,
+        status: 'duplicate',
+        title: parsed.title,
+        chapters: parsed.chapters.length,
+        existingBookId: existing.id,
+        duplicateType: 'library',   // trùng với truyện đang có
+      })
+      continue
+    }
+
+    // If user chose skip → skip
+    if (existing && dupAction === 'skip') {
+      results.push({ fileName: file.name, status: 'skipped', title: parsed.title })
+      continue
+    }
+
     try {
       const now = new Date()
-      const bookId = existing?.id ?? generateId()
+      // create action forces a new book even if title matches
+      const shouldUpdate = existing && dupAction === 'update'
+      const bookId = shouldUpdate ? existing.id : generateId()
 
-      if (existing) {
+      if (shouldUpdate) {
         await deleteChaptersByBook(bookId)
         await updateBook(bookId, {
           title: parsed.title,
@@ -358,9 +384,10 @@ export async function POST(req: Request) {
         wordCount: ch.wordCount, createdAt: now, updatedAt: now,
       })))
 
+      const wasUpdate = existing && dupAction === 'update'
       results.push({
         fileName: file.name,
-        status: existing ? 'updated' : 'imported',
+        status: wasUpdate ? 'updated' : 'imported',
         bookId,
         title: parsed.title,
         chapters: parsed.chapters.length,

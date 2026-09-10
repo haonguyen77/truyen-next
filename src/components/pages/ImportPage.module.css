@@ -123,3 +123,51 @@
 .importMoreBtn:hover { border-color: #aaa; }
 .libraryBtn { padding: 9px 20px; background: var(--accent); color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
 .libraryBtn:hover { background: var(--accent-hover); }
+
+/* ── Deleted-log warning ── */
+.deletedWarn { margin-top: 16px; background: #fff7ed; border: 1px solid #fdba74; border-radius: 8px; padding: 14px 16px; }
+.deletedWarnHeader { font-size: 14px; font-weight: 700; color: #c2410c; margin-bottom: 4px; }
+.deletedWarnDesc { font-size: 12px; color: #9a3412; margin-bottom: 10px; }
+.deletedItem { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; background: #fff; border: 1px solid #fed7aa; border-radius: 6px; margin-bottom: 6px; }
+.deletedTitle { font-size: 13px; font-weight: 600; color: var(--navy); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.deletedActions { display: flex; gap: 6px; flex-shrink: 0; }
+.deletedKeep { padding: 5px 12px; font-size: 12px; font-weight: 600; border: 1px solid #fdba74; background: #fff; color: #c2410c; border-radius: 5px; cursor: pointer; }
+.deletedKeep:hover { background: #fff7ed; }
+.deletedRemove { padding: 5px 12px; font-size: 12px; font-weight: 600; border: 1px solid #ef4444; background: #ef4444; color: #fff; border-radius: 5px; cursor: pointer; }
+.deletedRemove:hover { background: #dc2626; }
+
+/* ── Duplicate resolution ── */
+.dupSection { margin-top: 16px; background: #fff; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.dupHeader { padding: 14px 16px; background: #fefce8; border-bottom: 1px solid #fde047; }
+.dupHeader h2 { font-size: 16px; font-weight: 700; color: #a16207; margin: 0 0 4px; }
+.dupDesc { font-size: 12px; color: #854d0e; margin: 0; }
+.bulkBar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 16px; background: #fef9c3; border-bottom: 1px solid #fde047; }
+.bulkLabel { font-size: 12px; font-weight: 700; color: #854d0e; }
+.bulkBtn { padding: 6px 12px; font-size: 12px; font-weight: 600; border: 1px solid #d1d5db; background: #fff; color: var(--navy); border-radius: 5px; cursor: pointer; }
+.bulkBtn:hover { background: #f3f4f6; border-color: var(--accent); }
+.dupItem { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 16px; border-bottom: 1px solid var(--border); }
+.dupItem:last-of-type { border-bottom: none; }
+.dupInfo { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.dupInfo strong { font-size: 14px; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dupFile { font-size: 11px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dupBtns { display: flex; gap: 5px; flex-shrink: 0; }
+.dupActionBtn { padding: 6px 11px; font-size: 12px; font-weight: 600; border: 1px solid #d1d5db; background: #fff; color: var(--text-muted); border-radius: 5px; cursor: pointer; }
+.dupActionBtn:hover { border-color: var(--accent); color: var(--navy); }
+.dupActionActive { background: var(--navy); color: #fff; border-color: var(--navy); }
+.dupActionActive:hover { color: #fff; }
+.dupFooter { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; background: #f8f7f3; border-top: 1px solid var(--border); }
+.dupCount { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+.dupApplyBtn { padding: 9px 24px; font-size: 14px; font-weight: 700; background: var(--navy); color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+.dupApplyBtn:hover { background: var(--navy-light, #2a3f6b); }
+
+/* ── Skipped result ── */
+.resultSkip { border-left: 3px solid #9ca3af; background: #f9fafb; }
+
+@media (max-width: 640px) {
+  .dupItem { flex-direction: column; align-items: stretch; }
+  .dupBtns { justify-content: stretch; }
+  .dupActionBtn { flex: 1; }
+  .deletedItem { flex-direction: column; align-items: stretch; }
+  .deletedActions { justify-content: stretch; }
+  .deletedKeep, .deletedRemove { flex: 1; }
+}

@@ -3,6 +3,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import BookCover from '@/components/BookCover'
+import { logDeletedBook } from '@/lib/deletedBooks'
 import s from './AdminBooksPage.module.css'
 
 type Book = { id: string; title: string; author: string; description: string; cover: string; genres: string[]; chapterCount: number; sourceFileName: string; updatedAt: number }
@@ -28,6 +29,7 @@ export default function AdminBooksClient({ initialBooks }: { initialBooks: Book[
     if (!confirm(`Xóa truyện "${book.title}"?`)) return
     setDeleting(book.id)
     await fetch(`/api/books/${book.id}`, { method: 'DELETE' })
+    logDeletedBook(book.title)   // log để cảnh báo khi import lại
     setBooks(prev => prev.filter(b => b.id !== book.id))
     setDeleting(null)
   }

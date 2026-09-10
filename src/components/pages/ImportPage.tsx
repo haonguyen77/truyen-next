@@ -1,12 +1,17 @@
 'use client'
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { wasDeleted, removeFromDeletedLog } from '@/lib/deletedBooks'
+import { fileNameToTitle } from '@/lib/generateId'
 import s from './ImportPage.module.css'
 
 type ImportResult = {
   fileName: string; status: string; title?: string
   chapters?: number; error?: string; warnings?: string[]
+  existingBookId?: string; duplicateType?: string
 }
+
+type DupAction = 'skip' | 'update' | 'create'
 
 const ALL_GENRES = [
   'Ngôn tình', 'Xuyên không', 'Huyền huyễn', 'Tu tiên', 'Tiên hiệp',
@@ -16,13 +21,8 @@ const ALL_GENRES = [
 ]
 
 const USAGE_KEY = 'genre-usage-counts'
-
-function loadUsage(): Record<string, number> {
-  try { return JSON.parse(localStorage.getItem(USAGE_KEY) ?? '{}') } catch { return {} }
-}
-function saveUsage(counts: Record<string, number>) {
-  try { localStorage.setItem(USAGE_KEY, JSON.stringify(counts)) } catch {}
-}
+function loadUsage(): Record<string, number> { try { return JSON.parse(localStorage.getItem(USAGE_KEY) ?? '{}') } catch { return {} } }
+function saveUsage(c: Record<string, number>) { try { localStorage.setItem(USAGE_KEY, JSON.stringify(c)) } catch {} }
 
 export default function ImportPage() {
   const router = useRouter()
@@ -32,107 +32,150 @@ export default function ImportPage() {
   const [files, setFiles] = useState<File[]>([])
   const [isDrag, setIsDrag] = useState(false)
 
-  // Genre state
+  // Genre
   const [selected, setSelected] = useState<string[]>([])
   const [customInput, setCustomInput] = useState('')
   const [expanded, setExpanded] = useState(false)
   const [usageCounts, setUsageCounts] = useState<Record<string, number>>({})
 
-  // Sort genres: selected first → then by usage → then alphabetical
-  const sortedGenres = [...ALL_GENRES].sort((a, b) => {
-    const aSelected = selected.includes(a) ? 1 : 0
-    const bSelected = selected.includes(b) ? 1 : 0
-    if (aSelected !== bSelected) return bSelected - aSelected
-    return (usageCounts[b] ?? 0) - (usageCounts[a] ?? 0)
-  })
+  // Deleted-log warnings (before upload)
+  const [deletedDupes, setDeletedDupes] = useState<{ file: File; title: string }[]>([])
 
-  const visibleGenres = expanded ? sortedGenres : sortedGenres.slice(0, 10)
-
-  useEffect(() => { setUsageCounts(loadUsage()) }, [])
-
-  const toggleGenre = (g: string) => {
-    setSelected(prev =>
-      prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g]
-    )
-  }
-
-  const addCustom = (val: string) => {
-    const trimmed = val.trim()
-    if (trimmed && !selected.includes(trimmed)) {
-      setSelected(prev => [...prev, trimmed])
-    }
-    setCustomInput('')
-  }
-
-  const removeGenre = (g: string) => setSelected(prev => prev.filter(x => x !== g))
-
-  // Import state
+  // Import flow
   const [importing, setImporting] = useState(false)
   const [currentFile, setCurrentFile] = useState('')
   const [processed, setProcessed] = useState(0)
   const [results, setResults] = useState<ImportResult[] | null>(null)
 
+  // Duplicate resolution (library duplicates found during import)
+  const [duplicates, setDuplicates] = useState<ImportResult[]>([])
+  const [dupActions, setDupActions] = useState<Record<string, DupAction>>({})
+
+  const sortedGenres = [...ALL_GENRES].sort((a, b) => {
+    const aS = selected.includes(a) ? 1 : 0, bS = selected.includes(b) ? 1 : 0
+    if (aS !== bS) return bS - aS
+    return (usageCounts[b] ?? 0) - (usageCounts[a] ?? 0)
+  })
+  const visibleGenres = expanded ? sortedGenres : sortedGenres.slice(0, 10)
+
+  useEffect(() => { setUsageCounts(loadUsage()) }, [])
+
+  const toggleGenre = (g: string) => setSelected(p => p.includes(g) ? p.filter(x => x !== g) : [...p, g])
+  const addCustom = (v: string) => { const t = v.trim(); if (t && !selected.includes(t)) setSelected(p => [...p, t]); setCustomInput('') }
+  const removeGenre = (g: string) => setSelected(p => p.filter(x => x !== g))
+
+  // ── File selection + deleted-log check ──
   const accept = (fl: FileList | File[]) => {
     const arr = Array.from(fl).filter(f => /\.(docx|epub|pdf)$/i.test(f.name))
-    if (arr.length) setFiles(arr)
+    if (!arr.length) return
+    setFiles(arr)
+    // Check against deleted log
+    const dupes: { file: File; title: string }[] = []
+    for (const f of arr) {
+      const title = fileNameToTitle(f.name)
+      if (wasDeleted(title)) dupes.push({ file: f, title })
+    }
+    setDeletedDupes(dupes)
   }
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault(); setIsDrag(false); accept(e.dataTransfer.files)
+  const handleDrop = (e: React.DragEvent) => { e.preventDefault(); setIsDrag(false); accept(e.dataTransfer.files) }
+
+  // Remove a file from selection
+  const removeFile = (file: File) => {
+    setFiles(prev => prev.filter(f => f !== file))
+    setDeletedDupes(prev => prev.filter(d => d.file !== file))
   }
 
+  // ── Send one file to API ──
+  const importFile = async (file: File, dupAction?: DupAction): Promise<ImportResult[]> => {
+    const fd = new FormData()
+    fd.append('files', file)
+    fd.append('genres', JSON.stringify(selected))
+    if (dupAction) fd.append('dupAction', dupAction)
+
+    try {
+      const res = await fetch('/api/import', { method: 'POST', body: fd })
+      const ct = res.headers.get('content-type') ?? ''
+      if (!ct.includes('application/json')) {
+        const text = await res.text()
+        return [{ fileName: file.name, status: 'error', error: `Server error (${res.status}): ${text.slice(0, 200)}` }]
+      }
+      const data = await res.json()
+      return data.results ?? [{ fileName: file.name, status: 'error', error: data.error ?? 'Unknown' }]
+    } catch (err) {
+      return [{ fileName: file.name, status: 'error', error: String(err) }]
+    }
+  }
+
+  // ── Main import ──
   const handleImport = useCallback(async () => {
     if (!files.length) return
     setImporting(true)
     setProcessed(0)
     setResults(null)
+    setDuplicates([])
+    setDupActions({})
 
-    // Update usage counts for selected genres
     if (selected.length > 0) {
       const counts = loadUsage()
       selected.forEach(g => { counts[g] = (counts[g] ?? 0) + 1 })
-      saveUsage(counts)
-      setUsageCounts(counts)
+      saveUsage(counts); setUsageCounts(counts)
     }
 
     const allResults: ImportResult[] = []
+    const foundDupes: ImportResult[] = []
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i]
       setCurrentFile(file.name)
       setProcessed(i + 1)
-
-      const fd = new FormData()
-      fd.append('files', file)
-      fd.append('genres', JSON.stringify(selected))
-
-      try {
-        const res = await fetch('/api/import', { method: 'POST', body: fd })
-        const contentType = res.headers.get('content-type') ?? ''
-
-        if (!contentType.includes('application/json')) {
-          const text = await res.text()
-          allResults.push({
-            fileName: file.name, status: 'error',
-            error: `Server error (${res.status}): ${text.slice(0, 300)}`,
-          })
-          continue
-        }
-
-        const data = await res.json()
-        if (data.results) allResults.push(...data.results)
-        else allResults.push({ fileName: file.name, status: 'error', error: data.error ?? 'Unknown error' })
-      } catch (err) {
-        allResults.push({ fileName: file.name, status: 'error', error: String(err) })
+      const res = await importFile(file)  // no dupAction → detect duplicate
+      for (const r of res) {
+        if (r.status === 'duplicate') foundDupes.push(r)
+        else allResults.push(r)
       }
-
-      await new Promise(r => setTimeout(r, 80))
+      await new Promise(r => setTimeout(r, 60))
     }
 
     setResults(allResults)
+    setDuplicates(foundDupes)
     setImporting(false)
     setCurrentFile('')
   }, [files, selected])
+
+  // ── Resolve duplicates (after user chooses actions) ──
+  const handleResolveDuplicates = async () => {
+    const unresolved = duplicates.filter(d => !dupActions[d.fileName])
+    if (unresolved.length > 0) {
+      alert(`Vui lòng chọn hành động cho ${unresolved.length} truyện trùng.`)
+      return
+    }
+    setImporting(true)
+    const newResults = [...(results ?? [])]
+
+    for (let i = 0; i < duplicates.length; i++) {
+      const dup = duplicates[i]
+      const action = dupActions[dup.fileName]
+      const file = files.find(f => f.name === dup.fileName)
+      if (!file) continue
+      setCurrentFile(dup.fileName)
+      setProcessed(i + 1)
+      const res = await importFile(file, action)
+      newResults.push(...res)
+      await new Promise(r => setTimeout(r, 60))
+    }
+
+    setResults(newResults)
+    setDuplicates([])
+    setImporting(false)
+    setCurrentFile('')
+  }
+
+  const bulkSetDupAction = (action: DupAction) => {
+    const all: Record<string, DupAction> = {}
+    duplicates.forEach(d => { all[d.fileName] = action })
+    setDupActions(all)
+  }
 
   const ext = (n: string) => n.toLowerCase().split('.').pop() ?? ''
   const badgeClass = (n: string) => ext(n) === 'epub' ? s.epubBadge : ext(n) === 'pdf' ? s.pdfBadge : s.docxBadge
@@ -147,9 +190,9 @@ export default function ImportPage() {
           <p className={s.sub}>Chọn file <strong>.docx</strong>, <strong>.epub</strong> hoặc <strong>.pdf</strong></p>
         </div>
 
-        {!results && (
+        {/* ── SELECT + GENRE + FILE LIST ── */}
+        {!results && duplicates.length === 0 && (
           <>
-            {/* Drop zone */}
             <div ref={dropRef} className={`${s.drop} ${isDrag ? s.dragging : ''}`}
               onDragOver={e => { e.preventDefault(); setIsDrag(true) }}
               onDragLeave={e => { if (!dropRef.current?.contains(e.relatedTarget as Node)) setIsDrag(false) }}
@@ -162,61 +205,61 @@ export default function ImportPage() {
               <span className={s.dropBtn}>Chọn file</span>
               <p className={s.dropHint}>Hỗ trợ .docx · .epub · .pdf · nhiều file cùng lúc</p>
               <input ref={fileRef} type="file" accept=".docx,.epub,.pdf" multiple
-                style={{ display: 'none' }}
-                onChange={e => e.target.files && accept(e.target.files)} />
+                style={{ display: 'none' }} onChange={e => e.target.files && accept(e.target.files)} />
             </div>
+
+            {/* Deleted-log warning */}
+            {deletedDupes.length > 0 && (
+              <div className={s.deletedWarn}>
+                <div className={s.deletedWarnHeader}>
+                  ⚠ {deletedDupes.length} file trùng với truyện ĐÃ XÓA trước đây
+                </div>
+                <p className={s.deletedWarnDesc}>Các truyện này từng được xóa. Bạn có chắc muốn import lại?</p>
+                {deletedDupes.map((d, i) => (
+                  <div key={i} className={s.deletedItem}>
+                    <span className={s.deletedTitle}>📕 {d.title}</span>
+                    <div className={s.deletedActions}>
+                      <button className={s.deletedKeep} onClick={() => { removeFromDeletedLog(d.title); setDeletedDupes(p => p.filter(x => x !== d)) }}>
+                        Vẫn import
+                      </button>
+                      <button className={s.deletedRemove} onClick={() => removeFile(d.file)}>
+                        Bỏ file này
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Genre selector */}
             <div className={s.genreSection}>
               <div className={s.genreHeader}>
                 <span className={s.genreTitle}>🏷 Thể loại</span>
-                <span className={s.genreDesc}>Gán thể loại cho tất cả truyện trong lần import này</span>
+                <span className={s.genreDesc}>Gán thể loại cho tất cả truyện import lần này</span>
               </div>
-
-              {/* One-row chips + expand button */}
               <div className={s.chipsRow}>
                 {visibleGenres.map(g => (
-                  <button key={g} type="button"
-                    className={`${s.chip} ${selected.includes(g) ? s.chipActive : ''}`}
-                    onClick={() => toggleGenre(g)}>
-                    {selected.includes(g) && <span className={s.chipCheck}>✓</span>}
-                    {g}
-                    {(usageCounts[g] ?? 0) > 0 && !selected.includes(g) && (
-                      <span className={s.chipCount}>{usageCounts[g]}</span>
-                    )}
+                  <button key={g} type="button" className={`${s.chip} ${selected.includes(g) ? s.chipActive : ''}`} onClick={() => toggleGenre(g)}>
+                    {selected.includes(g) && <span className={s.chipCheck}>✓</span>}{g}
+                    {(usageCounts[g] ?? 0) > 0 && !selected.includes(g) && <span className={s.chipCount}>{usageCounts[g]}</span>}
                   </button>
                 ))}
                 <button type="button" className={s.expandBtn} onClick={() => setExpanded(v => !v)}>
                   {expanded ? '▲ Thu gọn' : `▼ Thêm (${sortedGenres.length - 10})`}
                 </button>
               </div>
-
-              {/* Custom input */}
               <div className={s.customRow}>
-                <input className={s.customInput}
-                  placeholder="Nhập thể loại khác... (Enter để thêm)"
-                  value={customInput}
-                  onChange={e => setCustomInput(e.target.value)}
+                <input className={s.customInput} placeholder="Nhập thể loại khác... (Enter)"
+                  value={customInput} onChange={e => setCustomInput(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustom(customInput) } }} />
-                <button type="button" className={s.customAddBtn} onClick={() => addCustom(customInput)}>
-                  Thêm
-                </button>
-                {selected.length > 0 && (
-                  <button type="button" className={s.clearAllBtn} onClick={() => setSelected([])}>
-                    Xóa hết
-                  </button>
-                )}
+                <button type="button" className={s.customAddBtn} onClick={() => addCustom(customInput)}>Thêm</button>
+                {selected.length > 0 && <button type="button" className={s.clearAllBtn} onClick={() => setSelected([])}>Xóa hết</button>}
               </div>
-
-              {/* Selected tags */}
               {selected.length > 0 && (
                 <div className={s.selectedRow}>
                   <span className={s.selectedLabel}>Đã chọn:</span>
                   {selected.map(g => (
-                    <span key={g} className={s.tag}>
-                      {g}
-                      <button type="button" className={s.tagRemove} onClick={() => removeGenre(g)}>✕</button>
-                    </span>
+                    <span key={g} className={s.tag}>{g}<button type="button" className={s.tagRemove} onClick={() => removeGenre(g)}>✕</button></span>
                   ))}
                 </div>
               )}
@@ -227,7 +270,7 @@ export default function ImportPage() {
               <div className={s.fileList}>
                 <div className={s.fileListHeader}>
                   <strong>ĐÃ CHỌN {files.length} FILE</strong>
-                  <button onClick={() => setFiles([])} className={s.clearBtn}>Xóa tất cả</button>
+                  <button onClick={() => { setFiles([]); setDeletedDupes([]) }} className={s.clearBtn}>Xóa tất cả</button>
                 </div>
                 <div className={s.fileScroll}>
                   {files.map((f, i) => (
@@ -235,65 +278,94 @@ export default function ImportPage() {
                       <span>{ext(f.name) === 'epub' ? '📗' : ext(f.name) === 'pdf' ? '📕' : '📄'}</span>
                       <span className={s.fileName}>{f.name}</span>
                       <span className={`${s.badge} ${badgeClass(f.name)}`}>{ext(f.name).toUpperCase()}</span>
-                      <span className={s.fileSize}>{(f.size / 1024).toFixed(0)} KB</span>
                     </div>
                   ))}
                 </div>
                 <button className={s.importBtn} onClick={handleImport} disabled={importing}>
-                  {importing
-                    ? `Đang xử lý ${processed}/${files.length}...`
-                    : `Import ${files.length} file${selected.length > 0 ? ` · Thể loại: ${selected.join(', ')}` : ''}`
-                  }
+                  {importing ? `Đang xử lý ${processed}/${files.length}...` : `Import ${files.length} file${selected.length > 0 ? ` · ${selected.join(', ')}` : ''}`}
                 </button>
               </div>
             )}
           </>
         )}
 
-        {/* Progress */}
+        {/* ── DUPLICATE RESOLUTION ── */}
+        {duplicates.length > 0 && !importing && (
+          <div className={s.dupSection}>
+            <div className={s.dupHeader}>
+              <h2>⚠ Phát hiện {duplicates.length} truyện trùng tên</h2>
+              <p className={s.dupDesc}>Các truyện này đã có trong thư viện. Chọn hành động:</p>
+            </div>
+
+            {/* Bulk actions */}
+            <div className={s.bulkBar}>
+              <span className={s.bulkLabel}>Áp dụng tất cả:</span>
+              <button className={s.bulkBtn} onClick={() => bulkSetDupAction('skip')}>↩ Bỏ qua hết</button>
+              <button className={s.bulkBtn} onClick={() => bulkSetDupAction('update')}>↺ Cập nhật hết</button>
+              <button className={s.bulkBtn} onClick={() => bulkSetDupAction('create')}>＋ Tạo mới hết</button>
+            </div>
+
+            {duplicates.map(dup => (
+              <div key={dup.fileName} className={s.dupItem}>
+                <div className={s.dupInfo}>
+                  <strong>{dup.title}</strong>
+                  <span className={s.dupFile}>{dup.fileName} · {dup.chapters} chương</span>
+                </div>
+                <div className={s.dupBtns}>
+                  {(['skip', 'update', 'create'] as DupAction[]).map(a => (
+                    <button key={a}
+                      className={`${s.dupActionBtn} ${dupActions[dup.fileName] === a ? s.dupActionActive : ''}`}
+                      onClick={() => setDupActions(p => ({ ...p, [dup.fileName]: a }))}>
+                      {a === 'skip' ? 'Bỏ qua' : a === 'update' ? 'Cập nhật' : 'Tạo mới'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            <div className={s.dupFooter}>
+              <span className={s.dupCount}>{Object.keys(dupActions).length}/{duplicates.length} đã chọn</span>
+              <button className={s.dupApplyBtn} onClick={handleResolveDuplicates}>
+                Áp dụng
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── PROGRESS ── */}
         {importing && (
           <div className={s.importing}>
-            <div className={s.progressBar}>
-              <div className={s.progressFill} style={{ width: `${progressPct}%` }} />
-            </div>
-            <p className={s.progressText}>
-              <span className={s.spinner}>⚙️</span>
-              Đang xử lý: <strong>{currentFile}</strong>
-            </p>
+            <div className={s.progressBar}><div className={s.progressFill} style={{ width: `${progressPct}%` }} /></div>
+            <p className={s.progressText}><span className={s.spinner}>⚙️</span> Đang xử lý: <strong>{currentFile}</strong></p>
             <p className={s.progressCount}>{processed} / {files.length} file — {progressPct}%</p>
           </div>
         )}
 
-        {/* Results */}
-        {results && (
+        {/* ── RESULTS ── */}
+        {results && duplicates.length === 0 && !importing && (
           <div className={s.results}>
             <div className={s.resultHeader}>
-              <h2>
-                {importedCount > 0
-                  ? `✅ Import thành công ${importedCount}/${results.length} truyện`
-                  : `⚠ Đã xử lý ${results.length} file — Thành công: ${importedCount}`}
-              </h2>
+              <h2>{importedCount > 0 ? `✅ Thành công ${importedCount}/${results.length} truyện` : `⚠ Đã xử lý ${results.length} file — Thành công: ${importedCount}`}</h2>
             </div>
             {results.map((r, i) => (
-              <div key={i} className={`${s.resultItem} ${r.status === 'error' ? s.resultError : r.status === 'updated' ? s.resultUpdated : s.resultOk}`}>
-                <span className={s.resultIcon}>
-                  {r.status === 'error' ? '✗' : r.status === 'updated' ? '↺' : '✓'}
-                </span>
+              <div key={i} className={`${s.resultItem} ${r.status === 'error' ? s.resultError : r.status === 'updated' ? s.resultUpdated : r.status === 'skipped' ? s.resultSkip : s.resultOk}`}>
+                <span className={s.resultIcon}>{r.status === 'error' ? '✗' : r.status === 'updated' ? '↺' : r.status === 'skipped' ? '⊘' : '✓'}</span>
                 <div className={s.resultInfo}>
                   <span className={s.resultFile}>{r.fileName}</span>
-                  {r.title && <span className={s.resultTitle}>{r.title} — {r.chapters} chương</span>}
+                  {r.title && r.chapters !== undefined && <span className={s.resultTitle}>{r.title} — {r.chapters} chương</span>}
                   {r.error && <span className={s.resultErrMsg}>{r.error}</span>}
                   {r.warnings?.map((w, wi) => <span key={wi} className={s.resultWarn}>⚠ {w}</span>)}
                 </div>
                 <span className={s.resultStatus}>
                   {r.status === 'imported' && 'Đã import'}
                   {r.status === 'updated' && 'Đã cập nhật'}
+                  {r.status === 'skipped' && 'Bỏ qua'}
                   {r.status === 'error' && 'Lỗi'}
                 </span>
               </div>
             ))}
             <div className={s.resultActions}>
-              <button className={s.importMoreBtn} onClick={() => { setFiles([]); setResults(null) }}>Import thêm</button>
+              <button className={s.importMoreBtn} onClick={() => { setFiles([]); setResults(null); setDeletedDupes([]) }}>Import thêm</button>
               <button className={s.libraryBtn} onClick={() => router.push('/')}>Về thư viện</button>
             </div>
           </div>

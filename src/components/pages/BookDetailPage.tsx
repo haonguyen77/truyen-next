@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from 'react'
 import BookCover from '@/components/BookCover'
 import { removeFromHistory, removeReadCount } from '@/lib/readingProgress'
 import { isFavorite, toggleFavorite } from '@/lib/favorites'
+import { logDeletedBook } from '@/lib/deletedBooks'
 import s from './BookDetailPage.module.css'
 
 type Book = { id: string; title: string; author: string; description: string; cover: string; genres: string[]; chapterCount: number }
@@ -99,6 +100,7 @@ export default function BookDetailClient({ book: initBook, chapters: initChapter
     await fetch(`/api/books/${book.id}`, { method: 'DELETE' })
     removeFromHistory(book.id)
     removeReadCount(book.id)
+    logDeletedBook(book.title)   // log để cảnh báo khi import lại
     router.push('/')
   }
 
