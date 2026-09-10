@@ -173,6 +173,17 @@ export async function saveChapters(data: NewChapterInput[]) {
   }
 }
 
+export async function updateChapter(id: string, data: { title?: string; content?: string }) {
+  const patch: Record<string, unknown> = { updatedAt: new Date() }
+  if (data.title !== undefined) patch.title = data.title
+  if (data.content !== undefined) {
+    patch.content = data.content
+    patch.wordCount = data.content.replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length
+  }
+  const [row] = await db.update(chapters).set(patch).where(eq(chapters.id, id)).returning()
+  return row ? toChapterClient(row) : null
+}
+
 export async function deleteChapter(id: string) {
   await db.delete(chapters).where(eq(chapters.id, id))
 }

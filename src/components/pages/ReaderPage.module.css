@@ -24,6 +24,8 @@
 .toc:hover { background: var(--navy-light, #2a3f6b); }
 .settingsBtn { background: #5a6878; min-width: 80px; }
 .settingsBtn:hover { background: #48566a; }
+.editChBtn { background: #7a6a4d; min-width: 90px; }
+.editChBtn:hover { background: #655840; }
 .disabled { background: #ccc; color: #888; pointer-events: none; cursor: default; }
 
 /* Icon/text inside nav buttons */
@@ -75,4 +77,5 @@
 
   .toc { flex: 1; }
   .settingsBtn { flex: 1; }
+  .editChBtn { flex: 1; min-width: 0; }
 }

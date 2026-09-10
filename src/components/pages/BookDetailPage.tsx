@@ -2,11 +2,14 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, useRef, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import BookCover from '@/components/BookCover'
 import { removeFromHistory, removeReadCount } from '@/lib/readingProgress'
 import { isFavorite, toggleFavorite } from '@/lib/favorites'
 import { logDeletedBook } from '@/lib/deletedBooks'
 import s from './BookDetailPage.module.css'
+
+const ChapterEditor = dynamic(() => import('@/components/ChapterEditor'), { ssr: false })
 
 type Book = { id: string; title: string; author: string; description: string; cover: string; genres: string[]; chapterCount: number }
 type Chapter = { id: string; index: number; title: string; wordCount: number }
@@ -16,6 +19,7 @@ export default function BookDetailClient({ book: initBook, chapters: initChapter
   const [book, setBook] = useState(initBook)
   const [chapters, setChapters] = useState(initChapters)
   const [chapterEditMode, setChapterEditMode] = useState(false)
+  const [editingChapter, setEditingChapter] = useState<Chapter | null>(null)
   const [editing, setEditing] = useState<{ title: string; author: string; description: string; genres: string; cover: string } | null>(null)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -176,7 +180,10 @@ export default function BookDetailClient({ book: initBook, chapters: initChapter
                   }
                 </Link>
                 {chapterEditMode && (
-                  <button className={s.chDelBtn} onClick={() => handleDeleteChapter(ch)} title="Xóa chương">🗑</button>
+                  <>
+                    <button className={s.chEditBtn} onClick={() => setEditingChapter(ch)} title="Sửa nội dung chương">✏</button>
+                    <button className={s.chDelBtn} onClick={() => handleDeleteChapter(ch)} title="Xóa chương">🗑</button>
+                  </>
                 )}
               </div>
             ))
@@ -230,6 +237,19 @@ export default function BookDetailClient({ book: initBook, chapters: initChapter
             </div>
           </div>
         </div>
+      )}
+
+      {/* Chapter content editor */}
+      {editingChapter && (
+        <ChapterEditor
+          bookId={book.id}
+          chapterId={editingChapter.id}
+          initialTitle={editingChapter.title}
+          onClose={() => setEditingChapter(null)}
+          onSaved={({ id, title, wordCount }) => {
+            setChapters(prev => prev.map(c => c.id === id ? { ...c, title, wordCount } : c))
+          }}
+        />
       )}
     </div>
   )

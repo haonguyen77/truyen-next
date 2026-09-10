@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic'
 import s from './ReaderPage.module.css'
 
 const ReaderSettingsPanel = dynamic(() => import('@/components/ReaderSettingsPanel'), { ssr: false })
+const ChapterEditor = dynamic(() => import('@/components/ChapterEditor'), { ssr: false })
 
 type Book = { id: string; title: string }
 type Chapter = { id: string; index: number; title: string; content?: string; wordCount: number }
@@ -15,6 +16,8 @@ export default function ReaderClient({ book, chapter, allChapters }: {
   book: Book; chapter: Chapter; allChapters: Chapter[]
 }) {
   const [showSettings, setShowSettings] = useState(false)
+  const [showEditor, setShowEditor] = useState(false)
+  const [chapterData, setChapterData] = useState(chapter)
   const [settings, setSettings] = useState<ReaderSettings>(loadReaderSettings)
 
   const prev = allChapters.find(c => c.index === chapter.index - 1) ?? null
@@ -94,6 +97,13 @@ export default function ReaderClient({ book, chapter, allChapters }: {
           <span className={s.btnText}> Cài đặt</span>
         </button>
       )}
+      {top && (
+        <button className={`${s.navBtn} ${s.editChBtn}`}
+          onClick={() => setShowEditor(true)} title="Sửa chương">
+          <span className={s.btnIcon}>✏</span>
+          <span className={s.btnText}> Sửa chương</span>
+        </button>
+      )}
       {next
         ? <Link href={`/books/${book.id}/chapter/${next.id}`} className={s.navBtn} title="Chương sau">
             <span className={s.btnText}>Chương sau </span>
@@ -113,6 +123,25 @@ export default function ReaderClient({ book, chapter, allChapters }: {
         <ReaderSettingsPanel
           onClose={() => setShowSettings(false)}
           onChange={handleSettingsChange}
+        />
+      )}
+
+      {showEditor && (
+        <ChapterEditor
+          bookId={book.id}
+          chapterId={chapterData.id}
+          initialTitle={chapterData.title}
+          onClose={() => setShowEditor(false)}
+          onSaved={async () => {
+            // reload chapter content after edit
+            try {
+              const res = await fetch(`/api/books/${book.id}/chapters/${chapterData.id}`)
+              if (res.ok) {
+                const fresh = await res.json()
+                setChapterData(prev => ({ ...prev, title: fresh.title, content: fresh.content }))
+              }
+            } catch {}
+          }}
         />
       )}
 
@@ -141,7 +170,7 @@ export default function ReaderClient({ book, chapter, allChapters }: {
                 textRendering: 'optimizeLegibility',
                 WebkitFontSmoothing: 'antialiased',
               }}>
-                {chapter.title.normalize('NFC')}
+                {chapterData.title.normalize('NFC')}
               </p>
               <div className={s.ornament} style={{ color: isDark ? '#5a9d72' : undefined }}>— ✦ —</div>
             </div>
@@ -150,7 +179,7 @@ export default function ReaderClient({ book, chapter, allChapters }: {
             <hr className={s.hr} style={isDark ? { borderColor: 'rgba(255,255,255,0.12)' } : {}} />
 
             <div className={s.content} style={contentStyle}
-              dangerouslySetInnerHTML={{ __html: (chapter.content ?? '').normalize('NFC') }} />
+              dangerouslySetInnerHTML={{ __html: (chapterData.content ?? '').normalize('NFC') }} />
 
             <hr className={s.hr} style={isDark ? { borderColor: 'rgba(255,255,255,0.12)' } : {}} />
             <NavBtns top={false} />

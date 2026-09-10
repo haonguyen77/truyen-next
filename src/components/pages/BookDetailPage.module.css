@@ -69,3 +69,44 @@
 .saveBtn { padding: 9px 20px; background: var(--accent); color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
 .saveBtn:hover:not(:disabled) { background: var(--accent-hover); }
 .saveBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Chapter edit button (in edit mode) */
+.chEditBtn { flex-shrink: 0; padding: 5px 12px; background: none; border: none; color: #7a6a4d; cursor: pointer; font-size: 14px; border-radius: 4px; }
+.chEditBtn:hover { background: #f5f1e8; }
+
+/* ── Mobile: gọn nút, tránh kéo dài tràn màn hình ── */
+@media (max-width: 640px) {
+  .page { padding: 14px 0 48px; }
+
+  .bookInfo { flex-direction: row; gap: 14px; padding: 16px; }
+  .titleRow { flex-direction: column; align-items: stretch; gap: 10px; }
+  .title { font-size: 18px; }
+
+  /* Action buttons: lưới 2 cột, đều nhau, không tràn */
+  .actionBtns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    width: 100%;
+  }
+  .favBtn, .editBtn, .delBtn, .warnBtn {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+    padding: 9px 6px;
+    font-size: 12px;
+    white-space: normal;
+    box-sizing: border-box;
+  }
+  /* Nút xóa chương rỗng chiếm cả 2 cột nếu có */
+  .warnBtn { grid-column: 1 / -1; }
+
+  .readBtn { align-self: stretch; text-align: center; }
+
+  /* Header danh sách chương */
+  .chHeader { padding: 10px 14px; flex-direction: column; align-items: stretch; gap: 8px; }
+  .editModeBtn { width: 100%; text-align: center; padding: 8px; }
+  .chLink { padding: 11px 14px; gap: 8px; }
+  .chName { font-size: 13px; }
+  .chWords { font-size: 11px; }
+}
