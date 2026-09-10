@@ -125,6 +125,14 @@ export default function ImportPage() {
     setLibDupes(prev => prev.filter(d => d.file !== file))
   }
 
+  // Skip ALL library-duplicate files at once (remove them before uploading)
+  const skipAllLibDupes = () => {
+    const dupFiles = new Set(libDupes.map(d => d.file))
+    setFiles(prev => prev.filter(f => !dupFiles.has(f)))
+    setDeletedDupes(prev => prev.filter(d => !dupFiles.has(d.file)))
+    setLibDupes([])
+  }
+
   // ── Send one file to API ──
   const importFile = async (file: File, dupAction?: DupAction): Promise<ImportResult[]> => {
     const fd = new FormData()
@@ -293,11 +301,21 @@ export default function ImportPage() {
                   🔁 {libDupes.length} file trùng tên với truyện ĐANG CÓ trong thư viện
                 </div>
                 <p className={s.libWarnDesc}>
-                  Khi import, bạn sẽ được chọn: bỏ qua, cập nhật, hoặc tạo mới cho từng truyện.
+                  Chọn cách xử lý ngay bên dưới, hoặc bỏ qua hết để không import lại các truyện này.
                 </p>
-                <div className={s.libWarnList}>
+                <div className={s.libWarnBulk}>
+                  <button className={s.libSkipAll} onClick={skipAllLibDupes}>
+                    ↩ Bỏ qua tất cả ({libDupes.length})
+                  </button>
+                </div>
+                <div className={s.libWarnItems}>
                   {libDupes.map((d, i) => (
-                    <span key={i} className={s.libWarnTag}>📘 {d.title}</span>
+                    <div key={i} className={s.libWarnItem}>
+                      <span className={s.libWarnItemTitle}>📘 {d.title}</span>
+                      <button className={s.libSkipOne} onClick={() => removeFile(d.file)}>
+                        Bỏ file này
+                      </button>
+                    </div>
                   ))}
                 </div>
               </div>

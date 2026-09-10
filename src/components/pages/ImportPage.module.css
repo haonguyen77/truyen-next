@@ -176,6 +176,12 @@
 .libWarn { margin-top: 16px; background: #eff6ff; border: 1px solid #93c5fd; border-radius: 8px; padding: 14px 16px; }
 .libWarnHeader { font-size: 14px; font-weight: 700; color: #1d4ed8; margin-bottom: 4px; }
 .libWarnDesc { font-size: 12px; color: #1e40af; margin-bottom: 10px; }
-.libWarnList { display: flex; flex-wrap: wrap; gap: 6px; }
-.libWarnTag { font-size: 12px; font-weight: 600; color: #1e3a8a; background: #dbeafe; border: 1px solid #bfdbfe; border-radius: 5px; padding: 4px 10px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.libWarnBulk { margin-bottom: 10px; }
+.libSkipAll { padding: 7px 16px; font-size: 13px; font-weight: 700; border: 1px solid #1d4ed8; background: #1d4ed8; color: #fff; border-radius: 6px; cursor: pointer; }
+.libSkipAll:hover { background: #1e40af; }
+.libWarnItems { display: flex; flex-direction: column; gap: 6px; }
+.libWarnItem { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 10px; background: #fff; border: 1px solid #bfdbfe; border-radius: 6px; }
+.libWarnItemTitle { font-size: 13px; font-weight: 600; color: #1e3a8a; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.libSkipOne { flex-shrink: 0; padding: 5px 12px; font-size: 12px; font-weight: 600; border: 1px solid #93c5fd; background: #fff; color: #1d4ed8; border-radius: 5px; cursor: pointer; }
+.libSkipOne:hover { background: #eff6ff; }
 .libChecking { margin-top: 12px; font-size: 12px; color: var(--text-muted); font-style: italic; }
