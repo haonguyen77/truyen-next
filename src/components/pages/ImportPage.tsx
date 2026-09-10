@@ -3,6 +3,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { wasDeleted, removeFromDeletedLog } from '@/lib/deletedBooks'
 import { fileNameToTitle } from '@/lib/generateId'
+import { parseFileClient } from '@/lib/clientParser'
 import s from './ImportPage.module.css'
 
 type ImportResult = {
@@ -136,21 +137,47 @@ export default function ImportPage() {
     setLibDupes([])
   }
 
-  // ── Send one file to API ──
+  // ── Parse a file in the browser, then send parsed JSON to the API ──
+  // Heavy parsing (mammoth/jszip) runs on the user's machine; server only writes to DB.
   const importFile = async (
     file: File,
     dupAction?: DupAction,
-    opts?: { skipDupCheck?: boolean; existingBookId?: string }
+    opts?: { existingBookId?: string }
   ): Promise<ImportResult[]> => {
-    const fd = new FormData()
-    fd.append('files', file)
-    fd.append('genres', JSON.stringify(selected))
-    if (dupAction) fd.append('dupAction', dupAction)
-    if (opts?.skipDupCheck) fd.append('skipDupCheck', 'true')
-    if (opts?.existingBookId) fd.append('existingBookId', opts.existingBookId)
+    const ext = file.name.toLowerCase().split('.').pop() ?? ''
 
+    // 1) Parse locally
+    let parsed
     try {
-      const res = await fetch('/api/import', { method: 'POST', body: fd })
+      parsed = await parseFileClient(file)
+    } catch (err) {
+      return [{ fileName: file.name, status: 'error', error: `Lỗi phân tích: ${err instanceof Error ? err.message : String(err)}` }]
+    }
+    if (parsed.errors.length > 0) {
+      return [{ fileName: file.name, status: 'error', error: parsed.errors[0], warnings: parsed.warnings }]
+    }
+
+    // 2) Send lightweight JSON (no raw file upload)
+    try {
+      const res = await fetch('/api/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fileName: file.name,
+          sourceFileType: ext,
+          genres: selected,
+          dupAction,
+          existingBookId: opts?.existingBookId,
+          parsed: {
+            title: parsed.title,
+            author: parsed.author,
+            description: parsed.description,
+            coverBase64: parsed.coverBase64,
+            chapters: parsed.chapters,
+            warnings: parsed.warnings,
+          },
+        }),
+      })
       const ct = res.headers.get('content-type') ?? ''
       if (!ct.includes('application/json')) {
         const text = await res.text()
@@ -207,7 +234,7 @@ export default function ImportPage() {
         const file = queue.shift()
         if (!file) break
         setCurrentFile(file.name)
-        const res = await importFile(file, undefined, { skipDupCheck: true })
+        const res = await importFile(file)
         for (const r of res) {
           if (r.status === 'duplicate') foundDupes.push(r)
           else allResults.push(r)
@@ -246,9 +273,8 @@ export default function ImportPage() {
         const file = files.find(f => f.name === dup.fileName)
         if (!file) continue
         setCurrentFile(dup.fileName)
-        // Pass existingBookId so server updates the right book without re-querying (cách 2)
+        // Pass existingBookId so server updates the right book without re-querying
         const res = await importFile(file, action, {
-          skipDupCheck: true,
           existingBookId: dup.existingBookId,
         })
         newResults.push(...res)

@@ -271,8 +271,118 @@ async function parseEpub(buffer: ArrayBuffer, fileName: string): Promise<ParsedR
   return { title: bookTitle, author, description, coverBase64: '', chapters, warnings, errors }
 }
 
+// ── Shared: write one parsed book to the DB ───────────────────
+type ParsedInput = {
+  title: string; author: string; description: string
+  coverBase64: string; chapters: ParsedChapter[]; warnings: string[]
+}
+async function persistBook(
+  parsed: ParsedInput,
+  opts: {
+    fileName: string
+    ext: string
+    importGenres: string[]
+    existingId?: string          // when updating
+    isUpdate: boolean
+  }
+) {
+  const now = new Date()
+  const bookId = opts.isUpdate && opts.existingId ? opts.existingId : generateId()
+
+  if (opts.isUpdate && opts.existingId) {
+    await deleteChaptersByBook(bookId)
+    await updateBook(bookId, {
+      title: parsed.title,
+      author: parsed.author || undefined,
+      description: parsed.description || undefined,
+      cover: parsed.coverBase64 || undefined,
+      genres: opts.importGenres.length > 0 ? opts.importGenres : undefined,
+      sourceFileName: opts.fileName,
+      sourceFileType: opts.ext,
+      chapterCount: parsed.chapters.length,
+    })
+  } else {
+    await createBook({
+      id: bookId,
+      title: parsed.title,
+      author: parsed.author,
+      description: parsed.description,
+      cover: parsed.coverBase64,
+      genres: opts.importGenres,
+      sourceFileName: opts.fileName,
+      sourceFileType: opts.ext,
+      chapterCount: parsed.chapters.length,
+    })
+  }
+
+  await saveChapters(parsed.chapters.map(ch => ({
+    id: generateId(), bookId, index: ch.index,
+    title: ch.title, content: ch.content,
+    wordCount: ch.wordCount, createdAt: now, updatedAt: now,
+  })))
+
+  return bookId
+}
+
+// ── JSON handler: client already parsed the file (fast path) ──
+// Body: { fileName, sourceFileType, genres[], dupAction?, existingBookId?, parsed{...} }
+async function handleParsedJson(req: Request): Promise<Response> {
+  let body: {
+    fileName?: string
+    sourceFileType?: string
+    genres?: string[]
+    dupAction?: 'skip' | 'update' | 'create'
+    existingBookId?: string
+    parsed?: ParsedInput
+  }
+  try { body = await req.json() } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }) }
+
+  const fileName = body.fileName ?? 'unknown'
+  const ext = (body.sourceFileType ?? 'docx').toLowerCase()
+  const importGenres = Array.isArray(body.genres) ? body.genres : []
+  const dupAction = body.dupAction
+  const existingId = body.existingBookId
+  const parsed = body.parsed
+
+  if (!parsed || !Array.isArray(parsed.chapters)) {
+    return NextResponse.json({ results: [{ fileName, status: 'error', error: 'Thiếu dữ liệu đã phân tích' }] })
+  }
+  if (parsed.chapters.length === 0) {
+    return NextResponse.json({ results: [{ fileName, status: 'error', error: 'Không có nội dung chương' }] })
+  }
+
+  // Duplicate resolution mirrors the file path.
+  // The client pre-detects duplicates, so a duplicate here always carries a dupAction.
+  if (existingId && dupAction === 'skip') {
+    return NextResponse.json({ results: [{ fileName, status: 'skipped', title: parsed.title }] })
+  }
+
+  try {
+    const isUpdate = !!existingId && dupAction === 'update'
+    const bookId = await persistBook(parsed, { fileName, ext, importGenres, existingId, isUpdate })
+    return NextResponse.json({
+      results: [{
+        fileName,
+        status: isUpdate ? 'updated' : 'imported',
+        bookId,
+        title: parsed.title,
+        chapters: parsed.chapters.length,
+        warnings: parsed.warnings ?? [],
+      }],
+    })
+  } catch (err) {
+    return NextResponse.json({ results: [{ fileName, status: 'error', error: `DB error: ${err instanceof Error ? err.message : String(err)}` }] })
+  }
+}
+
 // ── Main handler ──────────────────────────────────────────────
 export async function POST(req: Request) {
+  // Fast path: client parsed the file and sent JSON (no server-side parsing)
+  const contentType = req.headers.get('content-type') ?? ''
+  if (contentType.includes('application/json')) {
+    return handleParsedJson(req)
+  }
+
   let formData: FormData
   try {
     formData = await req.formData()
