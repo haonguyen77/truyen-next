@@ -203,8 +203,10 @@ export default function ReaderClient({ book, chapter, allChapters }: {
         <div className={s.readerWrap}>
           <div className={s.readerCard}>
             <div className={s.chHeader}>
-              <h1 className={s.bookName} style={{ color: isDark ? '#7ecfa0' : undefined }}>
-                {book.title.normalize('NFC').toUpperCase()}
+      <h1 className={s.bookName} style={{ color: isDark ? '#7ecfa0' : undefined }}>
+                <Link href={`/books/${book.id}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                  {book.title.normalize('NFC').toUpperCase()}
+                </Link>
               </h1>
               <p className={s.chTitle} style={{
                 color: isDark ? '#a0b8c0' : undefined,

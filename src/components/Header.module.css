@@ -34,7 +34,7 @@
 @media (max-width: 900px) {
   .logoText { font-size: 16px; }
   .navLink span { display: none; }
-  .searchWrap { max-width: none; flex: 1; margin-left: 0; }
+  .searchWrap { max-width: 160px; flex: 1; margin-left: 0; }
 }
 
 .authBtn {
@@ -45,7 +45,7 @@
   text-decoration: none;
   font-size: 13px;
   font-weight: 600;
-  padding: 7px 12px;
+  padding: 7px 10px;
   border-radius: 7px;
   background: rgba(255,255,255,0.12);
   border: 1px solid rgba(255,255,255,0.2);
@@ -58,4 +58,5 @@
 
 @media (max-width: 900px) {
   .authBtnText { display: none; }
+  .authBtn { padding: 7px 9px; }
 }

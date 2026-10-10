@@ -52,3 +52,19 @@
 .saveBtn { padding: 9px 20px; background: var(--accent); color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; }
 .saveBtn:hover:not(:disabled) { background: var(--accent-hover); }
 .saveBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Mobile ── */
+@media (max-width: 640px) {
+  .thead { grid-template-columns: 32px 36px 1fr 60px 80px; gap: 6px; padding: 8px 10px; }
+  .trow  { grid-template-columns: 32px 36px 1fr 60px 80px; gap: 6px; padding: 8px 10px; }
+  /* Ẩn cột thể loại và ngày cập nhật */
+  .thead span:nth-child(4),
+  .trow  .genreCell,
+  .thead span:nth-child(6),
+  .trow  .dateCell { display: none; }
+  .bookTitle { font-size: 13px; }
+  .bookAuthor { font-size: 11px; }
+  .bookFile { display: none; }
+  .actions { gap: 4px; }
+  .viewBtn, .editBtn, .delBtn { padding: 5px 8px; font-size: 12px; }
+}

@@ -130,16 +130,16 @@ export default function BookDetailClient({ book: initBook, chapters: initChapter
                   onClick={handleToggleFavorite}
                   title={favorited ? 'Bỏ yêu thích' : 'Thêm yêu thích'}
                 >
-                  {favorited ? '❤' : '♡'} {favorited ? 'Yêu thích' : 'Yêu thích'}
+                  {favorited ? '❤' : '♡'}
                 </button>
-                <button className={s.editBtn} onClick={openEdit}>✏ Sửa</button>
+                <button className={s.editBtn} onClick={openEdit} title="Sửa thông tin truyện">✏</button>
                 {emptyCount > 0 && (
-                  <button className={s.warnBtn} onClick={handleDeleteEmpty}>
-                    🗑 Xóa {emptyCount} chương rỗng
+                  <button className={s.warnBtn} onClick={handleDeleteEmpty} title={`Xóa ${emptyCount} chương rỗng`}>
+                    🗑 {emptyCount}
                   </button>
                 )}
-                <button className={s.delBtn} onClick={handleDeleteBook} disabled={deleting}>
-                  🗑 Xóa truyện
+                <button className={s.delBtn} onClick={handleDeleteBook} disabled={deleting} title="Xóa truyện">
+                  🗑
                 </button>
               </div>
             </div>

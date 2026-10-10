@@ -1,7 +1,12 @@
-.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 4000; display: flex; align-items: center; justify-content: center; padding: 20px; }
-.panel { background: #fff; border-radius: 10px; width: 100%; max-width: 800px; height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 12px 40px rgba(0,0,0,0.3); }
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 4000; display: flex; align-items: flex-end; justify-content: center; }
+.panel { background: #fff; border-radius: 10px 10px 0 0; width: 100%; max-width: 800px; height: 92dvh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 -4px 24px rgba(0,0,0,0.2); }
 
-.topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; background: #f8f7f3; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+@media (min-width: 640px) {
+  .overlay { align-items: center; padding: 20px; }
+  .panel { border-radius: 10px; height: 90vh; }
+}
+
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; background: #f8f7f3; border-bottom: 1px solid var(--border); flex-shrink: 0; position: sticky; top: 0; z-index: 1; }
 .topTitle { font-size: 14px; font-weight: 800; color: var(--navy); }
 .topActions { display: flex; gap: 8px; }
 .cancelBtn { padding: 7px 16px; background: none; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; color: var(--text-secondary); cursor: pointer; font-family: inherit; }
