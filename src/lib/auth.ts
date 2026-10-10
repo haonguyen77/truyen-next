@@ -35,7 +35,7 @@ export async function hashPassword(password: string): Promise<string> {
   const salt = crypto.getRandomValues(new Uint8Array(16))
   const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits'])
   const bits = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', hash: 'SHA-256', salt, iterations: 100000 },
+    { name: 'PBKDF2', hash: 'SHA-256', salt: salt.buffer as ArrayBuffer, iterations: 100000 },
     keyMaterial, 256
   ) as ArrayBuffer
   return toHex(salt) + ':' + toHex(bits)
@@ -45,10 +45,10 @@ export async function verifyPassword(password: string, stored: string): Promise<
   const [saltHex, hashHex] = stored.split(':')
   if (!saltHex || !hashHex) return false
   const enc = new TextEncoder()
-  const salt = fromHex(saltHex)
+  const saltArr = fromHex(saltHex)
   const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits'])
   const bits = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', hash: 'SHA-256', salt, iterations: 100000 },
+    { name: 'PBKDF2', hash: 'SHA-256', salt: saltArr.buffer as ArrayBuffer, iterations: 100000 },
     keyMaterial, 256
   ) as ArrayBuffer
   return toHex(bits) === hashHex
