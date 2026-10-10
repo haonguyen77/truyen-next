@@ -135,11 +135,11 @@ export default function BookDetailClient({ book: initBook, chapters: initChapter
                 <button className={s.editBtn} onClick={openEdit} title="Sửa thông tin truyện">✏</button>
                 {emptyCount > 0 && (
                   <button className={s.warnBtn} onClick={handleDeleteEmpty} title={`Xóa ${emptyCount} chương rỗng`}>
-                    🗑 {emptyCount}
+                    🗑 <span className={s.warnCount}>{emptyCount} rỗng</span>
                   </button>
                 )}
                 <button className={s.delBtn} onClick={handleDeleteBook} disabled={deleting} title="Xóa truyện">
-                  🗑
+                  ✕ <span className={s.delText}>Xóa truyện</span>
                 </button>
               </div>
             </div>

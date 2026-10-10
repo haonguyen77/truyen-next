@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import BookCover from '@/components/BookCover'
@@ -13,6 +13,28 @@ function fmtTime(ts: number) {
   if (d < 3600000) return `${Math.floor(d/60000)} phút trước`
   if (d < 86400000) return `${Math.floor(d/3600000)} giờ trước`
   return `${Math.floor(d/86400000)} ngày trước`
+}
+
+// ── Menu 3 chấm ──────────────────────────────────────────────
+function ActionMenu({ onEdit, onDelete, disabled }: { onEdit: () => void; onDelete: () => void; disabled: boolean }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+  return (
+    <div className={s.menuWrap} ref={ref}>
+      <button className={s.menuBtn} onClick={() => setOpen(v => !v)} disabled={disabled} title="Thao tác">⋯</button>
+      {open && (
+        <div className={s.menuDrop}>
+          <button className={s.menuItem} onClick={() => { onEdit(); setOpen(false) }}>✏ Sửa</button>
+          <button className={`${s.menuItem} ${s.menuDel}`} onClick={() => { onDelete(); setOpen(false) }}>🗑 Xóa</button>
+        </div>
+      )}
+    </div>
+  )
 }
 
 export default function AdminBooksClient({ initialBooks }: { initialBooks: Book[] }) {
@@ -96,7 +118,7 @@ export default function AdminBooksClient({ initialBooks }: { initialBooks: Book[
               <span>Thể loại</span>
               <span>Chương</span>
               <span>Cập nhật</span>
-              <span>Thao tác</span>
+              <span />
             </div>
             {books.map(book => (
               <div key={book.id} className={`${s.trow} ${selected.has(book.id) ? s.rowSel : ''}`}>
@@ -105,7 +127,7 @@ export default function AdminBooksClient({ initialBooks }: { initialBooks: Book[
                     onChange={() => setSelected(prev => { const s = new Set(prev); s.has(book.id) ? s.delete(book.id) : s.add(book.id); return s })} />
                 </span>
                 <span><BookCover title={book.title} cover={book.cover} size={32} radius={4} /></span>
-                <div className={s.bookInfo}>
+                <div className={s.bookInfo} onClick={() => router.push(`/books/${book.id}`)} style={{ cursor: 'pointer' }}>
                   <span className={s.bookTitle}>{book.title}</span>
                   {book.author && <span className={s.bookAuthor}>{book.author}</span>}
                   <span className={s.bookFile}>{book.sourceFileName}</span>
@@ -116,9 +138,11 @@ export default function AdminBooksClient({ initialBooks }: { initialBooks: Book[
                 <span className={s.cell}>{book.chapterCount}</span>
                 <span className={`${s.cell} ${s.dateCell}`}>{fmtTime(book.updatedAt)}</span>
                 <div className={s.actions}>
-                  <button className={s.viewBtn} onClick={() => router.push(`/books/${book.id}`)}>Xem</button>
-                  <button className={s.editBtn} onClick={() => setEditing({ id: book.id, title: book.title, author: book.author, description: book.description, genres: book.genres.join(', '), cover: book.cover })}>Sửa</button>
-                  <button className={s.delBtn} onClick={() => handleDelete(book)} disabled={deleting === book.id}>{deleting === book.id ? '...' : 'Xóa'}</button>
+                  <ActionMenu
+                    disabled={deleting === book.id}
+                    onEdit={() => setEditing({ id: book.id, title: book.title, author: book.author, description: book.description, genres: book.genres.join(', '), cover: book.cover })}
+                    onDelete={() => handleDelete(book)}
+                  />
                 </div>
               </div>
             ))}
