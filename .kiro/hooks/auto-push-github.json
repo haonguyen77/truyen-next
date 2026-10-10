@@ -1,0 +1,13 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Auto Push to GitHub after task",
+      "trigger": "Stop",
+      "action": {
+        "type": "agent",
+        "prompt": "After completing any coding task, always stage all modified files and push to GitHub using:\n& \"C:\\Program Files\\Git\\cmd\\git.exe\" -C \"i:\\Kiro\\truyen-next\" add src/ .kiro/\n& \"C:\\Program Files\\Git\\cmd\\git.exe\" -C \"i:\\Kiro\\truyen-next\" commit -m \"auto: sync changes\"\n& \"C:\\Program Files\\Git\\cmd\\git.exe\" -C \"i:\\Kiro\\truyen-next\" push origin main\n\nOnly push if there are actual changes (git status shows modified/untracked files). Use a descriptive commit message based on what was done."
+      }
+    }
+  ]
+}
