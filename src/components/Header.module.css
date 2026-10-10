@@ -36,3 +36,26 @@
   .navLink span { display: none; }
   .searchWrap { max-width: none; flex: 1; margin-left: 0; }
 }
+
+.authBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(255,255,255,0.85);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 7px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+.authBtn:hover { background: rgba(255,255,255,0.22); color: #fff; }
+.authBtnText { max-width: 100px; overflow: hidden; text-overflow: ellipsis; }
+
+@media (max-width: 900px) {
+  .authBtnText { display: none; }
+}

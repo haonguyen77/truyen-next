@@ -70,25 +70,41 @@ export default function WritePage() {
 
   const handleSave = async () => {
     if (!title.trim()) { alert('Vui lòng nhập tên truyện.'); return }
-    sync()
-    await new Promise(r => setTimeout(r, 50))
     setSaving(true)
     try {
-      const now = new Date().toISOString()
+      // Đọc trực tiếp từ DOM để tránh race condition với state
+      const currentContent = editorRef.current?.innerHTML ?? ''
+      const finalChapters = chapters.map((c, i) =>
+        i === activeIdx ? { ...c, content: currentContent } : c
+      )
+
       const bookId = genId()
       const genreList = genres.split(',').map(g => g.trim()).filter(Boolean)
-      const wordCount = (c: ChapterDraft) => c.content.replace(/<[^>]+>/g, '').split(/\s+/).filter(Boolean).length
+      const wc = (c: ChapterDraft) => c.content.replace(/<[^>]+>/g, '').split(/\s+/).filter(Boolean).length
 
       const res = await fetch('/api/write', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          book: { id: bookId, title: title.trim(), author, description, cover, genres: genreList, sourceFileName: `${title.trim()}.written`, sourceFileType: 'docx', chapterCount: chapters.length, createdAt: now, updatedAt: now },
-          chapters: chapters.map((c, i) => ({ id: genId(), bookId, index: i, title: c.title, content: c.content, wordCount: wordCount(c), createdAt: now, updatedAt: now })),
+          book: {
+            id: bookId, title: title.trim(), author, description, cover,
+            genres: genreList, sourceFileName: `${title.trim()}.written`,
+            sourceFileType: 'docx', chapterCount: finalChapters.length,
+          },
+          chapters: finalChapters.map((c, i) => ({
+            id: genId(), bookId, index: i, title: c.title,
+            content: c.content, wordCount: wc(c),
+          })),
         }),
       })
       const data = await res.json()
+      if (!res.ok || data.error) {
+        alert(`Lỗi lưu truyện: ${data.error ?? res.status}`)
+        return
+      }
       router.push(`/books/${data.bookId}`)
+    } catch (err) {
+      alert(`Lỗi kết nối: ${String(err)}`)
     } finally { setSaving(false) }
   }
 

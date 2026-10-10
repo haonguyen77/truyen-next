@@ -26,6 +26,10 @@
 .settingsBtn:hover { background: #48566a; }
 .editChBtn { background: #7a6a4d; min-width: 90px; }
 .editChBtn:hover { background: #655840; }
+.expandBtn { background: #2e7d52; min-width: 110px; }
+.expandBtn:hover:not(:disabled) { background: #256643; }
+.expandBtn:disabled { opacity: 0.7; cursor: wait; }
+.expanding { opacity: 0.8; }
 .disabled { background: #ccc; color: #888; pointer-events: none; cursor: default; }
 
 /* Icon/text inside nav buttons */
@@ -78,4 +82,8 @@
   .toc { flex: 1; }
   .settingsBtn { flex: 1; }
   .editChBtn { flex: 1; min-width: 0; }
+  .expandBtn { flex: 1; min-width: 0; }
 }
+
+/* Extra chapters appended via "Mở rộng" */
+.extraChapter { margin-top: 8px; }

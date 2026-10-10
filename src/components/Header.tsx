@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
-import { BookOpen, Library, Upload, Settings, Tag, ChevronDown, PenLine } from 'lucide-react'
+import { BookOpen, Library, Upload, Settings, Tag, ChevronDown, PenLine, User, LogIn } from 'lucide-react'
 import s from './Header.module.css'
 
 export default function Header() {
@@ -12,11 +12,14 @@ export default function Header() {
   const [suggestions, setSuggestions] = useState<{ id: string; title: string; chapterCount: number }[]>([])
   const [genreOpen, setGenreOpen] = useState(false)
   const [genres, setGenres] = useState<string[]>([])
+  const [username, setUsername] = useState<string | null>(null)
   const genreRef = useRef<HTMLDivElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // Load session và genres
   useEffect(() => {
     fetch('/api/genres').then(r => r.json()).then(setGenres).catch(() => {})
+    fetch('/api/auth/me').then(r => r.json()).then(d => setUsername(d?.username ?? null)).catch(() => {})
   }, [pathname])
 
   useEffect(() => {
@@ -104,6 +107,19 @@ export default function Header() {
             <div className={s.suggest}><div className={s.suggestEmpty}>Không tìm thấy</div></div>
           )}
         </div>
+
+        {/* Auth button */}
+        {username ? (
+          <Link href="/profile" className={s.authBtn} title={`Tài khoản: ${username}`}>
+            <User size={15} />
+            <span className={s.authBtnText}>{username}</span>
+          </Link>
+        ) : (
+          <Link href="/login" className={s.authBtn}>
+            <LogIn size={15} />
+            <span className={s.authBtnText}>Đăng nhập</span>
+          </Link>
+        )}
       </div>
     </header>
   )

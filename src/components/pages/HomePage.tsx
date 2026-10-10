@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
+import { useState, useEffect, useCallback } from 'react'
 import BookCover from '@/components/BookCover'
 import { getReadingHistory, getTopReadBooks, type ReadingEntry } from '@/lib/readingProgress'
 import { getFavorites, type FavoriteEntry } from '@/lib/favorites'
@@ -17,12 +17,33 @@ function fmtTime(ts: number) {
   return `${Math.floor(d/86400000)} ngày trước`
 }
 
-const PER_PAGE = 20
+const PER_PAGE = 30
 const SECTION_LIMIT = 5
 
 export default function HomePage({ books, genre }: { books: Book[]; allBooks: Book[]; genre?: string }) {
   const router = useRouter()
-  const [page, setPage] = useState(1)
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  // Lấy page từ URL để giữ trang khi nhấn Back
+  const urlPage = parseInt(searchParams.get('page') ?? '1', 10)
+  const [page, setPageState] = useState(isNaN(urlPage) || urlPage < 1 ? 1 : urlPage)
+
+  // Sync khi URL thay đổi (Back/Forward)
+  useEffect(() => {
+    const p = parseInt(searchParams.get('page') ?? '1', 10)
+    setPageState(isNaN(p) || p < 1 ? 1 : p)
+  }, [searchParams])
+
+  // Đổi trang → cập nhật URL
+  const setPage = useCallback((p: number) => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (p <= 1) params.delete('page')
+    else params.set('page', String(p))
+    const qs = params.toString()
+    router.push(pathname + (qs ? '?' + qs : ''), { scroll: false })
+  }, [router, pathname, searchParams])
+
   const [readingList, setReadingList] = useState<ReadingEntry[]>([])
   const [topBooks, setTopBooks] = useState<{ book: Book; count: number }[]>([])
   const [favorites, setFavorites] = useState<FavoriteEntry[]>([])
@@ -38,7 +59,6 @@ export default function HomePage({ books, genre }: { books: Book[]; allBooks: Bo
       .map(({ bookId, count }) => ({ book: books.find(b => b.id === bookId), count }))
       .filter((r): r is { book: Book; count: number } => !!r.book)
     setTopBooks(resolved)
-    // Load favorites — filter to only books that exist in current library
     const favs = getFavorites().filter(f => books.some(b => b.id === f.bookId))
     setFavorites(favs)
   }, [books])

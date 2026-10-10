@@ -20,6 +20,37 @@ export default function ReaderClient({ book, chapter, allChapters }: {
   const [chapterData, setChapterData] = useState(chapter)
   const [settings, setSettings] = useState<ReaderSettings>(loadReaderSettings)
 
+  // Expanded chapters (loaded on demand via "Mở rộng 5 chương")
+  const [extraChapters, setExtraChapters] = useState<Chapter[]>([])
+  const [expanding, setExpanding] = useState(false)
+
+  // The last chapter currently shown (base chapter or last of extraChapters)
+  const lastShownIndex = extraChapters.length > 0
+    ? extraChapters[extraChapters.length - 1].index
+    : chapter.index
+
+  const handleExpand = async () => {
+    if (expanding) return
+    setExpanding(true)
+    try {
+      // Pick up to 5 chapters after the last one currently shown
+      const toLoad = allChapters
+        .filter(c => c.index > lastShownIndex)
+        .slice(0, 5)
+      const loaded = await Promise.all(
+        toLoad.map(c =>
+          fetch(`/api/books/${book.id}/chapters/${c.id}`)
+            .then(r => r.ok ? r.json() : null)
+            .catch(() => null)
+        )
+      )
+      const valid = loaded.filter(Boolean) as Chapter[]
+      setExtraChapters(prev => [...prev, ...valid])
+    } finally {
+      setExpanding(false)
+    }
+  }
+
   const prev = allChapters.find(c => c.index === chapter.index - 1) ?? null
   const next = allChapters.find(c => c.index === chapter.index + 1) ?? null
 
@@ -104,6 +135,17 @@ export default function ReaderClient({ book, chapter, allChapters }: {
           <span className={s.btnText}> Sửa chương</span>
         </button>
       )}
+      {!top && lastShownIndex < allChapters[allChapters.length - 1]?.index && (
+        <button
+          className={`${s.navBtn} ${s.expandBtn} ${expanding ? s.expanding : ''}`}
+          onClick={handleExpand}
+          disabled={expanding}
+          title="Mở rộng 5 chương tiếp theo"
+        >
+          <span className={s.btnIcon}>{expanding ? '⏳' : '⤵'}</span>
+          <span className={s.btnText}> {expanding ? 'Đang tải...' : 'Mở rộng'}</span>
+        </button>
+      )}
       {next
         ? <Link href={`/books/${book.id}/chapter/${next.id}`} className={s.navBtn} title="Chương sau">
             <span className={s.btnText}>Chương sau </span>
@@ -186,6 +228,31 @@ export default function ReaderClient({ book, chapter, allChapters }: {
             <p className={s.pos} style={{ color: isDark ? 'rgba(255,255,255,0.35)' : undefined }}>
               Chương {chapter.index + 1} / {allChapters.length}
             </p>
+
+            {/* Extra chapters loaded by "Mở rộng" */}
+            {extraChapters.map((ch, i) => (
+              <div key={ch.id} className={s.extraChapter}>
+                <hr className={s.hr} style={isDark ? { borderColor: 'rgba(255,255,255,0.12)' } : {}} />
+                <div className={s.chHeader}>
+                  <p className={s.chTitle} style={{
+                    color: isDark ? '#a0b8c0' : undefined,
+                    fontFamily: "'Times New Roman', serif",
+                  }}>
+                    {ch.title.normalize('NFC')}
+                  </p>
+                  <div className={s.ornament} style={{ color: isDark ? '#5a9d72' : undefined }}>— ✦ —</div>
+                </div>
+                <div className={s.content} style={contentStyle}
+                  dangerouslySetInnerHTML={{ __html: (ch.content ?? '').normalize('NFC') }} />
+                <p className={s.pos} style={{ color: isDark ? 'rgba(255,255,255,0.35)' : undefined }}>
+                  Chương {ch.index + 1} / {allChapters.length}
+                </p>
+                {/* Show nav again after the last extra chapter */}
+                {i === extraChapters.length - 1 && (
+                  <NavBtns top={false} />
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </div>
