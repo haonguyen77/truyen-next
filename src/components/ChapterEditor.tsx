@@ -9,12 +9,14 @@ interface Props {
   initialTitle: string
   onClose: () => void
   onSaved?: (data: { id: string; title: string; wordCount: number }) => void
+  onDeleted?: (chapterId: string) => void
 }
 
-export default function ChapterEditor({ bookId, chapterId, initialTitle, onClose, onSaved }: Props) {
+export default function ChapterEditor({ bookId, chapterId, initialTitle, onClose, onSaved, onDeleted }: Props) {
   const [title, setTitle] = useState(initialTitle)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const editorRef = useRef<HTMLDivElement>(null)
   const { selected, box, startDrag, scaleSelected } = useImageResize(editorRef)
 
@@ -85,14 +87,31 @@ export default function ChapterEditor({ bookId, chapterId, initialTitle, onClose
     } finally { setSaving(false) }
   }
 
+  const handleDelete = async () => {
+    if (!confirm(`Xóa chương "${title}"? Không thể hoàn tác.`)) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/books/${bookId}/chapters/${chapterId}`, { method: 'DELETE' })
+      if (res.ok) {
+        onDeleted?.(chapterId)
+        onClose()
+      } else {
+        alert('Xóa thất bại, thử lại.')
+      }
+    } finally { setDeleting(false) }
+  }
+
   return (
     <div className={s.overlay}>
       <div className={s.panel}>
         <div className={s.topbar}>
           <span className={s.topTitle}>✏ Sửa chương</span>
           <div className={s.topActions}>
-            <button className={s.cancelBtn} onClick={onClose} disabled={saving}>Hủy</button>
-            <button className={s.saveBtn} onClick={handleSave} disabled={saving || loading}>
+            <button className={s.deleteBtn} onClick={handleDelete} disabled={saving || deleting || loading} title="Xóa chương">
+              {deleting ? '⏳' : '🗑'} Xóa chương
+            </button>
+            <button className={s.cancelBtn} onClick={onClose} disabled={saving || deleting}>Hủy</button>
+            <button className={s.saveBtn} onClick={handleSave} disabled={saving || loading || deleting}>
               {saving ? 'Đang lưu...' : 'Lưu'}
             </button>
           </div>

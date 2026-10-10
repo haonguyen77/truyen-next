@@ -18,23 +18,23 @@
 
 /* Nav buttons — desktop: với chữ */
 .navBtns { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 20px 0; flex-wrap: nowrap; }
-.navBtn { display: inline-flex; align-items: center; justify-content: center; padding: 9px 20px; background: var(--accent); color: #fff; border-radius: 5px; font-size: 13px; font-weight: 600; text-decoration: none; min-width: 130px; white-space: nowrap; border: none; cursor: pointer; font-family: inherit; transition: background 0.15s; }
+.navBtn { display: inline-flex; align-items: center; justify-content: center; padding: 9px 16px; background: var(--accent); color: #fff; border-radius: 5px; font-size: 20px; font-weight: 400; text-decoration: none; min-width: 52px; white-space: nowrap; border: none; cursor: pointer; font-family: inherit; transition: background 0.15s; gap: 0; }
 .navBtn:hover { background: var(--accent-hover); text-decoration: none; }
-.toc { background: var(--navy); min-width: 110px; }
+.toc { background: var(--navy); min-width: 52px; }
 .toc:hover { background: var(--navy-light, #2a3f6b); }
-.settingsBtn { background: #5a6878; min-width: 80px; }
+.settingsBtn { background: #5a6878; min-width: 52px; }
 .settingsBtn:hover { background: #48566a; }
-.editChBtn { background: #7a6a4d; min-width: 90px; }
+.editChBtn { background: #7a6a4d; min-width: 52px; }
 .editChBtn:hover { background: #655840; }
-.expandBtn { background: #2e7d52; min-width: 110px; }
+.expandBtn { background: #2e7d52; min-width: 52px; }
 .expandBtn:hover:not(:disabled) { background: #256643; }
 .expandBtn:disabled { opacity: 0.7; cursor: wait; }
 .expanding { opacity: 0.8; }
 .disabled { background: #ccc; color: #888; pointer-events: none; cursor: default; }
 
-/* Icon/text inside nav buttons */
-.btnIcon { flex-shrink: 0; }
-.btnText { } /* visible desktop, hidden mobile */
+/* Ẩn chữ, chỉ hiện icon */
+.btnIcon { flex-shrink: 0; font-size: 20px; }
+.btnText { display: none; }
 
 .hr { border: none; border-top: 1px solid #cfc9b8; margin: 24px 0; }
 
@@ -57,28 +57,8 @@
   .bcCur { max-width: 140px; }
   .content :global(p) { text-indent: 1.5em; }
 
-  /* Nav buttons: 1 hàng, icon thay chữ dài */
-  .navBtns {
-    gap: 6px;
-    flex-wrap: nowrap;
-    width: 100%;
-    padding: 0 4px;
-    box-sizing: border-box;
-  }
-
-  .navBtn {
-    flex: 1;
-    min-width: 0;
-    padding: 11px 6px;
-    font-size: 20px;
-    font-weight: 400;
-    gap: 0;
-  }
-
-  /* Ẩn chữ, chỉ hiện icon */
-  .btnText { display: none; }
-  .btnIcon { font-size: 20px; }
-
+  .navBtns { gap: 6px; width: 100%; padding: 0 4px; box-sizing: border-box; }
+  .navBtn { flex: 1; min-width: 0; padding: 11px 6px; }
   .toc { flex: 1; }
   .settingsBtn { flex: 1; }
   .editChBtn { flex: 1; min-width: 0; }

@@ -6,6 +6,9 @@
 .topActions { display: flex; gap: 8px; }
 .cancelBtn { padding: 7px 16px; background: none; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; color: var(--text-secondary); cursor: pointer; font-family: inherit; }
 .cancelBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+.deleteBtn { padding: 7px 14px; background: none; border: 1px solid #e74c3c; border-radius: 6px; font-size: 13px; color: #e74c3c; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+.deleteBtn:hover:not(:disabled) { background: #e74c3c; color: #fff; }
+.deleteBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 .saveBtn { padding: 7px 20px; background: var(--accent); color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
 .saveBtn:hover:not(:disabled) { background: var(--accent-hover); }
 .saveBtn:disabled { opacity: 0.5; cursor: not-allowed; }
