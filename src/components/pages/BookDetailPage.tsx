@@ -144,10 +144,6 @@ export default function BookDetailClient({ book: initBook, chapters: initChapter
               </div>
             </div>
             {book.author && <p className={s.author}><span className={s.lbl}>Tác giả:</span> {book.author}</p>}
-            {book.genres.length > 0 && (
-              <div className={s.genres}>{book.genres.map(g => <span key={g} className={s.genre}>{g}</span>)}</div>
-            )}
-            <p className={s.stats}><span className={s.badge}>{chapters.length} chương</span></p>
             {book.description && <p className={s.desc}>{book.description}</p>}
             {chapters.length > 0 && (
               <button className={s.readBtn} onClick={() => router.push(`/books/${book.id}/chapter/${chapters[0].id}`)}>
