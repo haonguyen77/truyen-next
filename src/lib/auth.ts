@@ -17,8 +17,9 @@ async function getKey(secret: string, usage: KeyUsage[]): Promise<CryptoKey> {
   )
 }
 
-function toHex(buf: ArrayBuffer): string {
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('')
+function toHex(buf: ArrayBuffer | Uint8Array): string {
+  const arr = buf instanceof Uint8Array ? buf : new Uint8Array(buf)
+  return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
 function fromHex(hex: string): Uint8Array {
@@ -36,7 +37,7 @@ export async function hashPassword(password: string): Promise<string> {
   const bits = await crypto.subtle.deriveBits(
     { name: 'PBKDF2', hash: 'SHA-256', salt, iterations: 100000 },
     keyMaterial, 256
-  )
+  ) as ArrayBuffer
   return toHex(salt) + ':' + toHex(bits)
 }
 
@@ -49,7 +50,7 @@ export async function verifyPassword(password: string, stored: string): Promise<
   const bits = await crypto.subtle.deriveBits(
     { name: 'PBKDF2', hash: 'SHA-256', salt, iterations: 100000 },
     keyMaterial, 256
-  )
+  ) as ArrayBuffer
   return toHex(bits) === hashHex
 }
 
