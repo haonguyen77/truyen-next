@@ -1,7 +1,11 @@
 .page { min-height: 100vh; transition: background 0.2s; }
 
-/* Breadcrumb — sticky desktop, relative mobile */
+/* Breadcrumb — sticky desktop only */
 .bcBar { background: var(--navy); position: sticky; top: var(--header-h); z-index: 100; border-bottom: 1px solid rgba(255,255,255,0.1); }
+
+@media (max-width: 900px) {
+  .bcBar { position: relative; top: auto; }
+}
 .bc { display: flex; align-items: center; gap: 8px; padding: 9px 0; font-size: 13px; flex-wrap: wrap; }
 .bcLink { color: rgba(255,255,255,0.75); text-decoration: none; }
 .bcLink:hover { color: #fff; text-decoration: underline; }
