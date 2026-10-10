@@ -209,11 +209,11 @@ export default function HomePage({ books, genre }: { books: Book[]; allBooks: Bo
               ))}
               {totalPages > 1 && (
                 <div className={s.pagination}>
-                  <button className={s.pageBtn} disabled={page===1} onClick={() => setPage(p=>p-1)}>‹</button>
+                  <button className={s.pageBtn} disabled={page===1} onClick={() => setPage(page-1)}>‹</button>
                   {Array.from({length: totalPages}, (_,i) => i+1).map(p => (
                     <button key={p} className={`${s.pageBtn} ${p===page ? s.pageBtnActive : ''}`} onClick={() => setPage(p)}>{p}</button>
                   ))}
-                  <button className={s.pageBtn} disabled={page===totalPages} onClick={() => setPage(p=>p+1)}>›</button>
+                  <button className={s.pageBtn} disabled={page===totalPages} onClick={() => setPage(page+1)}>›</button>
                 </div>
               )}
             </>
