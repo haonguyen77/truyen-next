@@ -4,6 +4,10 @@
   background: linear-gradient(135deg, #1e2d4d 0%, #243560 100%);
   z-index: 1000; box-shadow: 0 2px 12px rgba(0,0,0,0.25);
 }
+
+@media (max-width: 900px) {
+  .header { height: auto; }
+}
 .inner { height: 100%; display: flex; align-items: center; gap: 16px; }
 .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; flex-shrink: 0; }
 .logoIcon { width: 36px; height: 36px; background: rgba(255,255,255,0.12); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; }
@@ -32,11 +36,21 @@
 .suggestMeta { font-size: 12px; color: var(--text-muted); flex-shrink: 0; }
 .suggestEmpty { padding: 12px 14px; font-size: 13px; color: var(--text-muted); text-align: center; }
 @media (max-width: 900px) {
+  .inner {
+    flex-wrap: wrap;
+    gap: 0;
+    height: auto;
+    padding: 8px 12px;
+    row-gap: 6px;
+  }
+  .logo { flex-shrink: 0; }
   .logoText { font-size: 16px; }
+  .nav { flex: 1; justify-content: flex-end; }
   .navLink span { display: none; }
   .navLink { padding: 7px 7px; }
-  .searchWrap { max-width: 110px; flex: 1; margin-left: 0; }
-  .inner { gap: 4px; }
+  /* Hàng 2: search + login chiếm full width */
+  .searchWrap { order: 10; flex: 1; max-width: none; margin-left: 0; width: 100%; }
+  .authBtn { order: 10; flex-shrink: 0; }
 }
 
 .authBtn {

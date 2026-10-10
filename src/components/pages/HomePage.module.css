@@ -97,10 +97,11 @@
 @media (max-width: 960px) {
   .page { padding: 0 0 80px; }
   .topRow { grid-template-columns: 1fr; gap: 0; margin-bottom: 0; }
-  .cardReading, .cardPopular { border-radius: 0; border-left: none; border-right: none; border-bottom: none; }
+  /* Bỏ viền giữa các section */
+  .cardReading, .cardPopular { border-radius: 0; border-left: none; border-right: none; border-bottom: none; box-shadow: none; }
   .tableHead { display: none; }
-  .sectionNew { border-radius: 0; border-left: none; border-right: none; }
-  .sectionFav { border-radius: 0; border-left: none; border-right: none; margin-bottom: 0; }
+  .sectionNew { border-radius: 0; border-left: none; border-right: none; box-shadow: none; }
+  .sectionFav { border-radius: 0; border-left: none; border-right: none; margin-bottom: 0; box-shadow: none; }
   .newHeader { border-radius: 0; }
 
   /* Row → flex card */

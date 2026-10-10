@@ -33,6 +33,11 @@ img { max-width: 100%; height: auto; }
   .container { padding: 0 10px; }
 }
 
+/* Header 2 hàng trên mobile */
+@media (max-width: 900px) {
+  .main-content { padding-top: 106px !important; }
+}
+
 /* Reader */
 .reader-content { font-family: 'Times New Roman', serif; font-size: 20px; line-height: 1.9; color: #2c2c2c; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
 .reader-content p { margin-bottom: 1.1em; text-align: justify; text-indent: 2em; }

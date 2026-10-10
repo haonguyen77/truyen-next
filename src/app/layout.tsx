@@ -14,7 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <Header />
         <SyncProvider />
-        <main style={{ paddingTop: 'var(--header-h)' }}>
+        <main style={{ paddingTop: 'var(--header-h)' }} className="main-content">
           {children}
         </main>
       </body>
