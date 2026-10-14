@@ -26,6 +26,7 @@
 .chName { font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
 .chDel { padding: 4px 10px; background: none; border: none; color: #ccc; cursor: pointer; font-size: 12px; }
 .chDel:hover { color: #c0392b; }
+.newBadge { font-size: 10px; font-weight: 700; background: var(--accent); color: #fff; border-radius: 3px; padding: 1px 5px; flex-shrink: 0; }
 .sbFooter { padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; border-top: 1px solid #e8e8e4; background: #fafaf8; }
 .saveBtn { padding: 10px; background: var(--accent); color: #fff; border: none; border-radius: 7px; font-size: 14px; font-weight: 700; cursor: pointer; }
 .saveBtn:hover:not(:disabled) { background: var(--accent-hover); }

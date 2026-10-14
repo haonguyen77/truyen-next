@@ -132,7 +132,7 @@ export default function BookDetailClient({ book: initBook, chapters: initChapter
                 >
                   {favorited ? '❤' : '♡'}
                 </button>
-                <button className={s.editBtn} onClick={openEdit} title="Sửa thông tin truyện">✏</button>
+                <button className={s.editBtn} onClick={() => router.push(`/admin/write?bookId=${book.id}`)} title="Sửa truyện">✏</button>
                 {emptyCount > 0 && (
                   <button className={s.warnBtn} onClick={handleDeleteEmpty} title={`Xóa ${emptyCount} chương rỗng`}>
                     🗑 <span className={s.warnCount}>{emptyCount} rỗng</span>

@@ -70,7 +70,8 @@ export default function ReaderClient({ book, chapter, allChapters }: {
   }
 
   const prev = allChapters.find(c => c.index === chapter.index - 1) ?? null
-  const next = allChapters.find(c => c.index === chapter.index + 1) ?? null
+  // next tính từ lastShownIndex để sau khi đọc chương extra, ▶ đi tiếp đúng
+  const nextChapter = allChapters.find(c => c.index === lastShownIndex + 1) ?? null
 
   // Scroll to top on chapter change
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior }) }, [chapter.id])
@@ -102,7 +103,7 @@ export default function ReaderClient({ book, chapter, allChapters }: {
       if (showSettings) return
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return
       if (e.key === 'ArrowLeft' && prev) window.location.href = `/books/${book.id}/chapter/${prev.id}`
-      if (e.key === 'ArrowRight' && next) window.location.href = `/books/${book.id}/chapter/${next.id}`
+      if (e.key === 'ArrowRight' && nextChapter) window.location.href = `/books/${book.id}/chapter/${nextChapter.id}`
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
@@ -164,8 +165,8 @@ export default function ReaderClient({ book, chapter, allChapters }: {
           <span className={s.btnText}> {expanding ? 'Đang tải...' : 'Mở rộng'}</span>
         </button>
       )}
-      {next
-        ? <Link href={`/books/${book.id}/chapter/${next.id}`} className={s.navBtn} title="Chương sau">
+      {nextChapter
+        ? <Link href={`/books/${book.id}/chapter/${nextChapter.id}`} className={s.navBtn} title="Chương sau">
             <span className={s.btnText}>Chương sau </span>
             <span className={s.btnIcon}>▶</span>
           </Link>

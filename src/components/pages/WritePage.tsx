@@ -6,21 +6,68 @@ import { useImageResize } from '@/lib/useImageResize'
 import s from './WritePage.module.css'
 
 function genId() { return crypto.randomUUID() }
-interface ChapterDraft { id: string; title: string; content: string }
+interface ChapterDraft { id: string; title: string; content: string; isNew?: boolean }
 
-export default function WritePage() {
+export default function WritePage({ bookId }: { bookId?: string }) {
   const router = useRouter()
+  const isEdit = !!bookId
+
+  const [loading, setLoading] = useState(isEdit)
   const [title, setTitle] = useState('')
   const [author, setAuthor] = useState('')
   const [genres, setGenres] = useState('')
   const [description, setDescription] = useState('')
   const [cover, setCover] = useState('')
-  const [chapters, setChapters] = useState<ChapterDraft[]>([{ id: genId(), title: 'Chương 1', content: '' }])
+  const [chapters, setChapters] = useState<ChapterDraft[]>([{ id: genId(), title: 'Chương 1', content: '', isNew: true }])
   const [activeIdx, setActiveIdx] = useState(0)
   const [saving, setSaving] = useState(false)
   const editorRef = useRef<HTMLDivElement>(null)
   const coverRef = useRef<HTMLInputElement>(null)
   const { selected, box, startDrag, scaleSelected } = useImageResize(editorRef)
+
+  // Load existing book data when editing
+  useEffect(() => {
+    if (!bookId) return
+    ;(async () => {
+      try {
+        const [bookRes, chsRes] = await Promise.all([
+          fetch(`/api/books/${bookId}`),
+          fetch(`/api/books/${bookId}/chapters`),
+        ])
+        const book = await bookRes.json()
+        const chs = await chsRes.json()
+
+        setTitle(book.title ?? '')
+        setAuthor(book.author ?? '')
+        setGenres(Array.isArray(book.genres) ? book.genres.join(', ') : '')
+        setDescription(book.description ?? '')
+        setCover(book.cover ?? '')
+
+        // Load chapter content for each chapter
+        const drafts: ChapterDraft[] = await Promise.all(
+          (chs as { id: string; title: string }[]).map(async (c) => {
+            const r = await fetch(`/api/books/${bookId}/chapters/${c.id}`)
+            const full = r.ok ? await r.json() : c
+            return { id: c.id, title: c.title, content: full.content ?? '', isNew: false }
+          })
+        )
+        setChapters(drafts.length > 0 ? drafts : [{ id: genId(), title: 'Chương 1', content: '', isNew: true }])
+        setActiveIdx(0)
+      } finally {
+        setLoading(false)
+      }
+    })()
+  }, [bookId])
+
+  // Set editor content when switching chapters or after loading
+  useEffect(() => {
+    if (loading) return
+    if (editorRef.current) {
+      editorRef.current.innerHTML = chapters[activeIdx]?.content ?? ''
+      editorRef.current.focus()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeIdx, loading])
 
   const sync = useCallback(() => {
     if (!editorRef.current) return
@@ -29,14 +76,6 @@ export default function WritePage() {
   }, [activeIdx])
 
   const switchChapter = (idx: number) => { sync(); setActiveIdx(idx) }
-
-  useEffect(() => {
-    if (editorRef.current) {
-      editorRef.current.innerHTML = chapters[activeIdx]?.content ?? ''
-      editorRef.current.focus()
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeIdx])
 
   const exec = (cmd: string, val?: string) => { document.execCommand(cmd, false, val); editorRef.current?.focus() }
 
@@ -63,46 +102,70 @@ export default function WritePage() {
 
   const addChapter = () => {
     sync()
-    const c: ChapterDraft = { id: genId(), title: `Chương ${chapters.length + 1}`, content: '' }
+    const c: ChapterDraft = { id: genId(), title: `Chương ${chapters.length + 1}`, content: '', isNew: true }
     setChapters(prev => [...prev, c])
     setActiveIdx(chapters.length)
   }
 
+  // ── Save ──────────────────────────────────────────────────
   const handleSave = async () => {
     if (!title.trim()) { alert('Vui lòng nhập tên truyện.'); return }
     setSaving(true)
     try {
-      // Đọc trực tiếp từ DOM để tránh race condition với state
       const currentContent = editorRef.current?.innerHTML ?? ''
       const finalChapters = chapters.map((c, i) =>
         i === activeIdx ? { ...c, content: currentContent } : c
       )
-
-      const bookId = genId()
       const genreList = genres.split(',').map(g => g.trim()).filter(Boolean)
       const wc = (c: ChapterDraft) => c.content.replace(/<[^>]+>/g, '').split(/\s+/).filter(Boolean).length
 
-      const res = await fetch('/api/write', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          book: {
-            id: bookId, title: title.trim(), author, description, cover,
-            genres: genreList, sourceFileName: `${title.trim()}.written`,
-            sourceFileType: 'docx', chapterCount: finalChapters.length,
-          },
-          chapters: finalChapters.map((c, i) => ({
-            id: genId(), bookId, index: i, title: c.title,
-            content: c.content, wordCount: wc(c),
-          })),
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok || data.error) {
-        alert(`Lỗi lưu truyện: ${data.error ?? res.status}`)
-        return
+      if (isEdit && bookId) {
+        // ── Edit mode: PATCH book metadata + upsert chapters ──
+        await fetch(`/api/books/${bookId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: title.trim(), author, description, cover,
+            genres: genreList, chapterCount: finalChapters.length,
+          }),
+        })
+
+        // Upsert all chapters (existing ones update, new ones create)
+        const res = await fetch('/api/write/chapters', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            bookId,
+            chapters: finalChapters.map((c, i) => ({
+              id: c.id, bookId, index: i, title: c.title,
+              content: c.content, wordCount: wc(c),
+            })),
+          }),
+        })
+        if (!res.ok) { alert('Lỗi lưu chương'); return }
+        router.push(`/books/${bookId}`)
+      } else {
+        // ── Create mode ──
+        const newBookId = genId()
+        const res = await fetch('/api/write', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            book: {
+              id: newBookId, title: title.trim(), author, description, cover,
+              genres: genreList, sourceFileName: `${title.trim()}.written`,
+              sourceFileType: 'docx', chapterCount: finalChapters.length,
+            },
+            chapters: finalChapters.map((c, i) => ({
+              id: genId(), bookId: newBookId, index: i, title: c.title,
+              content: c.content, wordCount: wc(c),
+            })),
+          }),
+        })
+        const data = await res.json()
+        if (!res.ok || data.error) { alert(`Lỗi lưu truyện: ${data.error ?? res.status}`); return }
+        router.push(`/books/${data.bookId}`)
       }
-      router.push(`/books/${data.bookId}`)
     } catch (err) {
       alert(`Lỗi kết nối: ${String(err)}`)
     } finally { setSaving(false) }
@@ -110,11 +173,21 @@ export default function WritePage() {
 
   const wc = chapters[activeIdx]?.content.replace(/<[^>]+>/g, '').split(/\s+/).filter(Boolean).length ?? 0
 
+  if (loading) {
+    return (
+      <div className={s.page} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: '#888', fontSize: 16 }}>Đang tải truyện...</p>
+      </div>
+    )
+  }
+
   return (
     <div className={s.page}>
       <div className={s.layout}>
         <aside className={s.sidebar}>
-          <div className={s.sbHeader}><h2 className={s.sbTitle}>Viết truyện mới</h2></div>
+          <div className={s.sbHeader}>
+            <h2 className={s.sbTitle}>{isEdit ? 'Chỉnh sửa truyện' : 'Viết truyện mới'}</h2>
+          </div>
 
           <div className={s.coverBlock} onClick={() => coverRef.current?.click()}>
             {cover ? <img src={cover} alt="cover" className={s.coverImg} /> : <BookCover title={title || 'Truyện'} size={90} radius={6} />}
@@ -146,6 +219,7 @@ export default function WritePage() {
                 <button className={s.chBtn} onClick={() => switchChapter(i)}>
                   <span className={s.chNum}>{i + 1}</span>
                   <span className={s.chName}>{ch.title || `Chương ${i + 1}`}</span>
+                  {ch.isNew && <span className={s.newBadge}>Mới</span>}
                 </button>
                 {chapters.length > 1 && (
                   <button className={s.chDel} onClick={() => {
@@ -159,7 +233,7 @@ export default function WritePage() {
 
           <div className={s.sbFooter}>
             <button className={s.saveBtn} onClick={handleSave} disabled={saving || !title.trim()}>
-              {saving ? 'Đang lưu...' : 'Lưu truyện'}
+              {saving ? 'Đang lưu...' : isEdit ? 'Lưu thay đổi' : 'Lưu truyện'}
             </button>
             <button className={s.cancelBtn} onClick={() => router.back()}>Hủy</button>
           </div>
