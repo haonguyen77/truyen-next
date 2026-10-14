@@ -20,23 +20,41 @@ export default function ReaderClient({ book, chapter, allChapters }: {
   const [chapterData, setChapterData] = useState(chapter)
   const [settings, setSettings] = useState<ReaderSettings>(loadReaderSettings)
 
-  // Expanded chapters (loaded on demand via "Mở rộng 5 chương")
+  // Expanded chapters (loaded on demand via "Mở rộng")
   const [extraChapters, setExtraChapters] = useState<Chapter[]>([])
   const [expanding, setExpanding] = useState(false)
+  const [autoLoaded, setAutoLoaded] = useState(false)
 
-  // The last chapter currently shown (base chapter or last of extraChapters)
+  // The last chapter currently shown
   const lastShownIndex = extraChapters.length > 0
     ? extraChapters[extraChapters.length - 1].index
     : chapter.index
+
+  // Tự động load 2 chương tiếp khi mở trang
+  useEffect(() => {
+    if (autoLoaded) return
+    setAutoLoaded(true)
+    const toLoad = allChapters.filter(c => c.index > chapter.index).slice(0, 2)
+    if (toLoad.length === 0) return
+    Promise.all(
+      toLoad.map(c =>
+        fetch(`/api/books/${book.id}/chapters/${c.id}`)
+          .then(r => r.ok ? r.json() : null)
+          .catch(() => null)
+      )
+    ).then(loaded => {
+      const valid = loaded.filter(Boolean) as Chapter[]
+      if (valid.length > 0) setExtraChapters(valid)
+    })
+  }, [autoLoaded, allChapters, book.id, chapter.index])
 
   const handleExpand = async () => {
     if (expanding) return
     setExpanding(true)
     try {
-      // Pick up to 5 chapters after the last one currently shown
       const toLoad = allChapters
         .filter(c => c.index > lastShownIndex)
-        .slice(0, 5)
+        .slice(0, 3)
       const loaded = await Promise.all(
         toLoad.map(c =>
           fetch(`/api/books/${book.id}/chapters/${c.id}`)

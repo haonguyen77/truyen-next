@@ -139,7 +139,7 @@ export default function WritePage() {
           <div className={s.chListSide}>
             <div className={s.chListHeader}>
               <span className={s.chListTitle}>Danh sách chương</span>
-              <button className={s.addChBtn} onClick={addChapter}>+ Thêm</button>
+              <button className={s.addChBtn} onClick={addChapter}>+ Thêm chương</button>
             </div>
             {chapters.map((ch, i) => (
               <div key={ch.id} className={`${s.chItem} ${i === activeIdx ? s.chActive : ''}`}>
