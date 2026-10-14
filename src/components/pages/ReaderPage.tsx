@@ -70,8 +70,7 @@ export default function ReaderClient({ book, chapter, allChapters }: {
   }
 
   const prev = allChapters.find(c => c.index === chapter.index - 1) ?? null
-  // next tính từ lastShownIndex để sau khi đọc chương extra, ▶ đi tiếp đúng
-  const nextChapter = allChapters.find(c => c.index === lastShownIndex + 1) ?? null
+  const nextChapter = allChapters.find(c => c.index === chapter.index + 1) ?? null
 
   // Scroll to top on chapter change
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior }) }, [chapter.id])
