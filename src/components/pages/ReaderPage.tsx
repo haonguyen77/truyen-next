@@ -107,7 +107,7 @@ export default function ReaderClient({ book, chapter, allChapters }: {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [prev, next, book.id, showSettings])
+  }, [prev, nextChapter, book.id, showSettings])
 
   const handleSettingsChange = useCallback((s: ReaderSettings) => setSettings(s), [])
 
